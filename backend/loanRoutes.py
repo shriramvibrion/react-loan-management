@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file
+import logging
 import os
 from uuid import uuid4
 
@@ -8,6 +9,22 @@ from werkzeug.utils import secure_filename
 from database import get_connection
 
 loan_bp = Blueprint("loan", __name__)
+logger = logging.getLogger(__name__)
+
+LOAN_PURPOSE_DOCS = {
+    "Home Loan": ["Land Document", "Approved Building Plan", "Property Registration"],
+    "Education Loan": ["Bonafide Certificate", "Fee Structure", "Academic Records"],
+    "Vehicle Loan": ["Proforma Invoice", "RC Copy"],
+    "Business Loan": ["Business Registration Proof", "Bank Statements", "GST Certificate"],
+}
+
+EMPLOYMENT_DOCS = {
+    "Salaried": ["Latest 3 Salary Slips", "Form 16", "Bank Statement (6 Months)"],
+    "Self-Employed": ["ITR (Last 2 Years)", "Business Bank Statement", "Profit & Loss Statement", "GST Returns"],
+    "Student": ["Co-applicant Income Proof", "Sponsor Bank Statement"],
+    "Retired": ["Pension Statement", "Bank Statement (6 Months)"],
+    "Other": ["Income Source Proof", "Recent Bank Statement"],
+}
 
 
 @loan_bp.route("/api/loan/apply", methods=["POST"])
@@ -24,6 +41,8 @@ def apply_loan():
         return (form_data.get(field_name) or "").strip()
 
     email = _get("email")
+    submission_type = (_get("submission_type") or "submit").lower()
+    agreement_decision = (_get("agreement_decision") or "").lower()
     loan_amount_raw = _get("loan_amount")
     tenure_raw = _get("tenure")
     loan_purpose = _get("loan_purpose")
@@ -46,70 +65,143 @@ def apply_loan():
     employment_type = _get("employment_type")
     notes = _get("notes")
 
-    if not email or not loan_amount_raw or not tenure_raw:
+    if submission_type not in ("submit", "draft"):
+        submission_type = "submit"
+
+    # Drafts are client-local only; backend accepts final submit only.
+    if submission_type == "draft":
+        return jsonify({"error": "Drafts are saved locally and are not submitted to server."}), 400
+
+    if agreement_decision not in ("accepted", "denied"):
+        return jsonify({"error": "Please select agreement decision (Accepted or Denied)."}), 400
+
+    if not email:
         return (
-            jsonify({"error": "Email, loan amount and tenure are required."}),
+            jsonify({"error": "Email is required."}),
             400,
         )
 
-    if (
-        not full_name
-        or not contact_email
-        or not primary_mobile
-        or not pan_number
-        or not aadhaar_number
-        or not loan_purpose
-    ):
-        return (
-            jsonify(
-                {
-                    "error": "Full name, contact email, mobile, PAN, Aadhaar and loan purpose are required."
-                }
-            ),
-            400,
-        )
+    is_draft = False
 
-    try:
-        loan_amount = float(loan_amount_raw)
-        tenure = int(tenure_raw)
-    except ValueError:
-        return (
-            jsonify(
-                {
-                    "error": "Loan amount must be a number and tenure must be an integer."
-                }
-            ),
-            400,
-        )
+    if not is_draft:
+        if agreement_decision != "accepted":
+            return jsonify({"error": "You must accept the agreement to submit the loan application."}), 400
 
-    if loan_amount <= 0 or tenure <= 0:
-        return (
-            jsonify(
-                {
-                    "error": "Loan amount and tenure must be greater than zero."
-                }
-            ),
-            400,
-        )
+        if not loan_amount_raw or not tenure_raw:
+            return (
+                jsonify({"error": "Email, loan amount and tenure are required."}),
+                400,
+            )
 
-    monthly_income = None
-    if monthly_income_raw:
+        required_text_fields = [
+            full_name,
+            contact_email,
+            primary_mobile,
+            dob,
+            address_line1,
+            address_line2,
+            city,
+            state,
+            postal_code,
+            pan_number,
+            aadhaar_number,
+            monthly_income_raw,
+            employer_name,
+            employment_type,
+            loan_purpose,
+            notes,
+        ]
+        if any(not field for field in required_text_fields):
+            return (
+                jsonify(
+                    {
+                        "error": "All fields are required except alternate mobile number."
+                    }
+                ),
+                400,
+            )
+
         try:
+            loan_amount = float(loan_amount_raw)
+            tenure = int(tenure_raw)
             monthly_income = float(monthly_income_raw)
         except ValueError:
-            monthly_income = None
+            return (
+                jsonify(
+                    {
+                        "error": "Loan amount/monthly income must be numbers and tenure must be an integer."
+                    }
+                ),
+                400,
+            )
 
-    # For now, use a fixed interest rate.
-    interest_rate = 10.0  # 10% annual interest
+        interest_rate_raw = _get("interest_rate")
+        try:
+            interest_rate = float(interest_rate_raw)
+        except ValueError:
+            return jsonify({"error": "Interest rate must be a valid number."}), 400
+
+        if loan_amount <= 0 or tenure <= 0 or monthly_income <= 0 or interest_rate <= 0:
+            return (
+                jsonify(
+                    {
+                        "error": "Loan amount, monthly income, interest rate and tenure must be greater than zero."
+                    }
+                ),
+                400,
+            )
+
+        required_file_keys = [
+            "pan_file",
+            "aadhaar_file",
+            "income_tax_certificate",
+            "tax_document",
+            "employment_proof",
+        ]
+        missing_core_files = [
+            key for key in required_file_keys
+            if not request.files.get(key) or not getattr(request.files.get(key), "filename", "")
+        ]
+        if missing_core_files:
+            return jsonify({"error": "All upload files are mandatory for final submission."}), 400
+
+        expected_loan_docs = LOAN_PURPOSE_DOCS.get(loan_purpose, [])
+        expected_employment_docs = EMPLOYMENT_DOCS.get(employment_type, [])
+        expected_dynamic_labels = set(expected_loan_docs + [f"Income - {d}" for d in expected_employment_docs])
+        submitted_labels = form_data.getlist("document_types[]") if hasattr(form_data, "getlist") else []
+        submitted_files = request.files.getlist("document_files[]") if hasattr(request.files, "getlist") else []
+        valid_submitted_labels = {
+            label for index, label in enumerate(submitted_labels)
+            if index < len(submitted_files) and submitted_files[index] and getattr(submitted_files[index], "filename", "")
+        }
+        missing_dynamic = expected_dynamic_labels - valid_submitted_labels
+        if missing_dynamic:
+            return jsonify({"error": "Please upload all mandatory loan and employment documents."}), 400
+    else:
+        monthly_income = None
+        if monthly_income_raw:
+            try:
+                monthly_income = float(monthly_income_raw)
+            except ValueError:
+                monthly_income = None
+
+        interest_rate_raw = _get("interest_rate")
+        try:
+            interest_rate = float(interest_rate_raw) if interest_rate_raw else 10.0
+        except ValueError:
+            interest_rate = 10.0
+
     monthly_rate = interest_rate / 12 / 100.0
 
-    # EMI calculation: P * r * (1+r)^n / ((1+r)^n - 1)
     if monthly_rate == 0:
         emi = loan_amount / tenure
     else:
         emi = loan_amount * monthly_rate * ((1 + monthly_rate) ** tenure) / (
             (1 + monthly_rate) ** tenure - 1
         )
+
+    agreement_prefix = f"[Agreement: {agreement_decision.capitalize()}]"
+    notes = f"{agreement_prefix} {notes}".strip() if notes else agreement_prefix
 
     conn = None
     cursor = None
@@ -128,6 +220,12 @@ def apply_loan():
             )
 
         user_id = user_row[0]
+
+        # Once user submits a final application, older server drafts (legacy) should not reload.
+        cursor.execute(
+            "UPDATE loans SET status = 'Archived' WHERE user_id = %s AND status = 'Draft'",
+            (user_id,),
+        )
 
         cursor.execute(
             """
@@ -286,10 +384,12 @@ def apply_loan():
             201,
         )
 
-    except mysql.connector.Error:
+    except mysql.connector.Error as e:
         if conn is not None:
             conn.rollback()
-        return jsonify({"error": "Database error occurred."}), 500
+        logger.exception("Apply loan database error")
+        err_msg = str(e).strip() if e else "Database error occurred."
+        return jsonify({"error": err_msg}), 500
 
     finally:
         if cursor is not None:
@@ -360,6 +460,11 @@ def get_user_loans():
             cursor.close()
         if conn is not None:
             conn.close()
+
+
+@loan_bp.route("/api/loan/draft", methods=["GET"])
+def get_latest_draft():
+    return jsonify({"draft": None}), 200
 
 
 @loan_bp.route("/api/user/loans/<int:loan_id>", methods=["GET"])
@@ -576,6 +681,7 @@ def admin_get_all_loans():
                 u.name AS user_name
             FROM loans l
             JOIN users u ON l.user_id = u.user_id
+            WHERE l.status NOT IN ('Draft', 'Archived')
             ORDER BY l.applied_date DESC
             """,
         )
@@ -734,13 +840,15 @@ def admin_get_loan_detail(loan_id):
 def admin_update_loan_status(loan_id):
     """Accept or reject loan. Body: { "status": "Approved" } or { "status": "Rejected" }"""
     data = request.get_json() or {}
-    new_status = (data.get("status") or "").strip()
-
-    if new_status not in ("Approved", "Rejected", "Accepted"):
-        if new_status.lower() == "accepted":
-            new_status = "Approved"
-        else:
-            return jsonify({"error": "Invalid status. Use 'Approved' or 'Rejected'."}), 400
+    status_input = (data.get("status") or "").strip().lower()
+    status_map = {
+        "approved": "Approved",
+        "accepted": "Approved",
+        "rejected": "Rejected",
+    }
+    new_status = status_map.get(status_input)
+    if not new_status:
+        return jsonify({"error": "Invalid status. Use 'Approved' or 'Rejected'."}), 400
 
     conn = None
     cursor = None

@@ -6,6 +6,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("container"); // "container" or "list"
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     const fetchLoans = async () => {
@@ -43,12 +44,31 @@ export default function AdminDashboard({ navigate, onLogout }) {
     _status: (l.status || "").toLowerCase(),
     _who: `${l.user_name || ""} ${l.user_email || ""}`.trim(),
   }));
+  const loansByCreationOrder = [...normalizedLoans].sort((a, b) => {
+    const aDate = a.applied_date ? new Date(a.applied_date).getTime() : 0;
+    const bDate = b.applied_date ? new Date(b.applied_date).getTime() : 0;
+    if (aDate !== bDate) return aDate - bDate;
+    return (a.loan_id || 0) - (b.loan_id || 0);
+  });
+  const displayIdMap = new Map(
+    loansByCreationOrder.map((loan, index) => [loan.loan_id, index + 1])
+  );
 
   const filteredLoans = normalizedLoans.filter((l) => {
+    const statusMatches =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "accepted"
+        ? l._status === "approved" || l._status === "accepted"
+        : l._status === statusFilter;
+
+    if (!statusMatches) return false;
+
     if (!query.trim()) return true;
     const q = query.trim().toLowerCase();
     return (
       String(l.loan_id).includes(q) ||
+      String(displayIdMap.get(l.loan_id) || "").includes(q) ||
       String(l.user_email || "").toLowerCase().includes(q) ||
       String(l.user_name || "").toLowerCase().includes(q) ||
       String(l.status || "").toLowerCase().includes(q)
@@ -120,8 +140,11 @@ export default function AdminDashboard({ navigate, onLogout }) {
               display: "flex",
               gap: 10,
               alignItems: "center",
-              flexWrap: "wrap",
-              justifyContent: "flex-end",
+              flexWrap: "nowrap",
+              justifyContent: "space-between",
+              flex: 1,
+              minWidth: 420,
+              paddingBottom: 2,
             }}
           >
             <input
@@ -130,62 +153,81 @@ export default function AdminDashboard({ navigate, onLogout }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               style={{
-                width: 340,
-                maxWidth: "80vw",
+                flex: 1,
+                minWidth: 220,
                 background: "rgba(255,255,255,0.9)",
                 color: "#2d3748",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                 border: "1px solid rgba(255,138,51,0.35)",
               }}
             />
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                onClick={() => setViewMode("container")}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <select
+                className="input-field input-field-orange"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
                 style={{
-                  padding: "8px 12px",
-                  background: viewMode === "container" ? "#FF8A33" : "rgba(255,255,255,0.9)",
-                  color: viewMode === "container" ? "#fff" : "#FF8A33",
-                  border: "1px solid rgba(255,138,51,0.5)",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontSize: 18,
-                  transition: "all 0.2s",
+                  width: 170,
+                  background: "rgba(255,255,255,0.9)",
+                  color: "#2d3748",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  border: "1px solid rgba(255,138,51,0.35)",
                 }}
-                title="Container View"
               >
-                ⊞
-              </button>
+                <option value="all">All Status</option>
+                <option value="accepted">Accepted</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => setViewMode("container")}
+                  style={{
+                    padding: "8px 12px",
+                    background: viewMode === "container" ? "#FF8A33" : "rgba(255,255,255,0.9)",
+                    color: viewMode === "container" ? "#fff" : "#FF8A33",
+                    border: "1px solid rgba(255,138,51,0.5)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontSize: 18,
+                    transition: "all 0.2s",
+                  }}
+                  title="Container View"
+                >
+                  ⊞
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  style={{
+                    padding: "8px 12px",
+                    background: viewMode === "list" ? "#FF8A33" : "rgba(255,255,255,0.9)",
+                    color: viewMode === "list" ? "#fff" : "#FF8A33",
+                    border: "1px solid rgba(255,138,51,0.5)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontSize: 18,
+                    transition: "all 0.2s",
+                  }}
+                  title="List View"
+                >
+                  ☰
+                </button>
+              </div>
               <button
-                onClick={() => setViewMode("list")}
+                className="home-btn-orange"
                 style={{
-                  padding: "8px 12px",
-                  background: viewMode === "list" ? "#FF8A33" : "rgba(255,255,255,0.9)",
-                  color: viewMode === "list" ? "#fff" : "#FF8A33",
+                  width: "auto",
+                  padding: "10px 18px",
+                  background: "rgba(255,255,255,0.9)",
+                  color: "#FF8A33",
                   border: "1px solid rgba(255,138,51,0.5)",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontSize: 18,
-                  transition: "all 0.2s",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                 }}
-                title="List View"
+                onClick={() => onLogout && onLogout()}
               >
-                ☰
+                Logout
               </button>
             </div>
-            <button
-              className="home-btn-orange"
-              style={{
-                width: "auto",
-                padding: "10px 18px",
-                background: "rgba(255,255,255,0.9)",
-                color: "#FF8A33",
-                border: "1px solid rgba(255,138,51,0.5)",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-              }}
-              onClick={() => onLogout && onLogout()}
-            >
-              Logout
-            </button>
           </div>
         </div>
 
@@ -306,7 +348,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                         color: "#FF8A33",
                       }}
                     >
-                      Loan #{loan.loan_id}
+                      Loan #{displayIdMap.get(loan.loan_id)}
                     </span>
                     <span
                       style={{
@@ -355,7 +397,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "rgba(255,138,51,0.1)", borderBottom: "2px solid rgba(255,138,51,0.3)" }}>
-                  <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Loan ID</th>
+                  <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Loan No.</th>
                   <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>User ID</th>
                   <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Name</th>
                   <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Email</th>
@@ -381,7 +423,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                         e.currentTarget.style.background = "transparent";
                       }}
                     >
-                      <td style={{ padding: "12px", fontSize: 14, fontWeight: 700, color: "#FF8A33" }}>#{loan.loan_id}</td>
+                      <td style={{ padding: "12px", fontSize: 14, fontWeight: 700, color: "#FF8A33" }}>#{displayIdMap.get(loan.loan_id)}</td>
                       <td style={{ padding: "12px", fontSize: 13, color: "#2d3748" }}>{loan.user_id}</td>
                       <td style={{ padding: "12px", fontSize: 13, color: "#2d3748" }}>{loan.user_name || "N/A"}</td>
                       <td style={{ padding: "12px", fontSize: 13, color: "#2d3748", wordBreak: "break-word" }}>{loan.user_email}</td>
@@ -420,3 +462,4 @@ export default function AdminDashboard({ navigate, onLogout }) {
     </div>
   );
 }
+

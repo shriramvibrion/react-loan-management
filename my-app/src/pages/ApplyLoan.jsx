@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ApplyLoan({ navigate, userEmail }) {
   const [form, setForm] = useState({
@@ -40,10 +40,29 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [agreementDecision, setAgreementDecision] = useState("");
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const draftStorageKey = userEmail ? `loan_draft_${userEmail}` : "";
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    try {
+      const raw = localStorage.getItem(draftStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved?.form) return;
+
+      setForm((prev) => ({ ...prev, ...saved.form }));
+      setAgreementDecision(saved.agreementDecision || "");
+      setDraftLoaded(true);
+    } catch (err) {
+      // Ignore malformed local draft data.
+    }
+  }, [draftStorageKey]);
 
   const getInterestRateByLoanPurpose = (purpose) => {
     if (purpose === "Home Loan") return "8.50";
@@ -75,7 +94,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
     return emi.toFixed(2);
   }, [form.loan_amount, form.interest_rate, form.tenure]);
 
-  const handleApply = async () => {
+  const handleApply = async (submissionType = "submit") => {
     setMessage("");
 
     if (!userEmail) {
@@ -83,35 +102,103 @@ export default function ApplyLoan({ navigate, userEmail }) {
       return;
     }
 
-    const requiredFields = [
-      "full_name",
-      "contact_email",
-      "primary_mobile",
-      "loan_amount",
-      "tenure",
-      "interest_rate",
-      "loan_purpose",
-      "pan_number",
-      "aadhaar_number",
-    ];
-
-    const missing = requiredFields.filter(
-      (field) => !String(form[field] || "").trim()
-    );
-
-    if (missing.length > 0) {
-      setMessage("Please fill in all required fields marked with *.");
+    if (submissionType === "draft") {
+      if (!draftStorageKey) {
+        setMessage("Unable to save draft without active user session.");
+        return;
+      }
+      try {
+        localStorage.setItem(
+          draftStorageKey,
+          JSON.stringify({
+            form,
+            agreementDecision,
+            savedAt: new Date().toISOString(),
+          })
+        );
+        setDraftLoaded(true);
+        setMessage("Draft saved locally on this device.");
+      } catch (err) {
+        setMessage("Failed to save draft locally.");
+      }
       return;
     }
 
-    if (Number(form.loan_amount) <= 0 || Number(form.tenure) <= 0) {
-      setMessage("Loan amount and tenure must be greater than zero.");
+    if (!agreementDecision) {
+      setMessage("Please select agreement decision (Accept or Deny).");
       return;
     }
 
-    if (Number(form.interest_rate) <= 0) {
-      setMessage("Interest rate must be greater than zero.");
-      return;
+    if (submissionType === "submit") {
+      if (agreementDecision !== "accepted") {
+        setMessage("You must accept the agreement to submit. You can still save as draft.");
+        return;
+      }
+
+      const requiredFields = [
+        "full_name",
+        "contact_email",
+        "primary_mobile",
+        "dob",
+        "address_line1",
+        "address_line2",
+        "city",
+        "state",
+        "postal_code",
+        "loan_amount",
+        "tenure",
+        "interest_rate",
+        "loan_purpose",
+        "pan_number",
+        "aadhaar_number",
+        "monthly_income",
+        "employer_name",
+        "employment_type",
+        "notes",
+      ];
+
+      const missing = requiredFields.filter(
+        (field) => !String(form[field] || "").trim()
+      );
+
+      if (missing.length > 0) {
+        setMessage("All fields are mandatory.");
+        return;
+      }
+
+      if (Number(form.loan_amount) <= 0 || Number(form.tenure) <= 0) {
+        setMessage("Loan amount and tenure must be greater than zero.");
+        return;
+      }
+
+      if (Number(form.interest_rate) <= 0) {
+        setMessage("Interest rate must be greater than zero.");
+        return;
+      }
+
+      if (Number(form.monthly_income) <= 0) {
+        setMessage("Monthly income must be greater than zero.");
+        return;
+      }
+
+      if (!panFile || !aadhaarFile || !incomeTaxFile || !taxDocFile || !employmentProofFile) {
+        setMessage("Please upload all mandatory files (PAN, Aadhaar, Income Tax, Tax Document, Employment Proof).");
+        return;
+      }
+
+      const missingLoanDocs = getLoanSpecificDocs().filter((docType) => !loanDocuments[docType]);
+      if (missingLoanDocs.length > 0) {
+        setMessage(`Please upload all mandatory loan documents: ${missingLoanDocs.join(", ")}.`);
+        return;
+      }
+
+      const missingEmploymentDocs = getEmploymentSpecificDocs().filter(
+        (docType) => !employmentDocuments[docType]
+      );
+      if (missingEmploymentDocs.length > 0) {
+        setMessage(`Please upload all mandatory employment documents: ${missingEmploymentDocs.join(", ")}.`);
+        return;
+      }
     }
 
     try {
@@ -126,6 +213,8 @@ export default function ApplyLoan({ navigate, userEmail }) {
       formData.append("interest_rate", form.interest_rate);
       formData.append("emi", emiValue);
       formData.append("loan_purpose", form.loan_purpose);
+      formData.append("submission_type", submissionType);
+      formData.append("agreement_decision", agreementDecision);
 
       // Personal information
       formData.append("full_name", form.full_name);
@@ -190,7 +279,16 @@ export default function ApplyLoan({ navigate, userEmail }) {
       const data = await res.json();
 
       if (res.ok) {
-        setMessage(data.message || "Loan applied successfully.");
+        if (draftStorageKey) {
+          localStorage.removeItem(draftStorageKey);
+        }
+        setDraftLoaded(false);
+        setMessage(
+          data.message ||
+            (submissionType === "draft"
+              ? "Loan draft saved successfully."
+              : "Loan applied successfully.")
+        );
       } else {
         setMessage(data.error || data.message || "Failed to apply loan.");
       }
@@ -356,7 +454,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Date of Birth
+                Date of Birth<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -368,7 +466,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Address Line 1
+                Address Line 1<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -380,7 +478,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Address Line 2
+                Address Line 2<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -392,7 +490,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                City
+                City<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -404,7 +502,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                State
+                State<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -416,7 +514,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                PIN / Postal Code
+                PIN / Postal Code<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -513,7 +611,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
                 className="input-field"
                 type="text"
                 readOnly
-                value={emiValue ? `₹ ${emiValue}` : ""}
+                value={emiValue ? `Rs ${emiValue}` : ""}
                 placeholder="Calculated automatically"
               />
             </div>
@@ -544,7 +642,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                PAN File
+                PAN File<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 type="file"
@@ -567,7 +665,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Aadhaar File
+                Aadhaar File<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 type="file"
@@ -590,7 +688,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Monthly Salary / Income
+                Monthly Salary / Income<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -603,7 +701,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Employer / Organisation
+                Employer / Organisation<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 className="input-field"
@@ -615,7 +713,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Employment Type
+                Employment Type<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <select
                 className="input-field"
@@ -636,7 +734,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Income Tax Certificate
+                Income Tax Certificate<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 type="file"
@@ -647,7 +745,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Tax Document
+                Tax Document<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 type="file"
@@ -658,7 +756,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
 
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                Employment Proof
+                Employment Proof<span style={{ color: "#e06d0a" }}> *</span>
               </label>
               <input
                 type="file"
@@ -683,7 +781,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
               {getEmploymentSpecificDocs().map((docType) => (
                 <div key={docType}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                    {docType}
+                    {docType}<span style={{ color: "#e06d0a" }}> *</span>
                   </label>
                   <input
                     type="file"
@@ -710,7 +808,7 @@ export default function ApplyLoan({ navigate, userEmail }) {
                 {getLoanSpecificDocs().map((docType) => (
                   <div key={docType}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-                      {docType}
+                      {docType}<span style={{ color: "#e06d0a" }}> *</span>
                     </label>
                     <input
                       type="file"
@@ -724,8 +822,57 @@ export default function ApplyLoan({ navigate, userEmail }) {
         )}
 
         <section style={{ marginBottom: 20, background: "rgba(255,255,255,0.6)", padding: "20px", borderRadius: 12, border: "1px solid rgba(180,193,220,0.3)" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#1a3f8f" }}>
+            Agreement Confirmation<span style={{ color: "#e06d0a" }}> *</span>
+          </div>
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+            Confirm your agreement decision before saving draft or submitting.
+          </div>
+          <div
+            style={{
+              background: "rgba(26,95,196,0.08)",
+              border: "1px solid rgba(26,95,196,0.2)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              marginBottom: 10,
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#1a3f8f", marginBottom: 6 }}>
+              Terms & Policies
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "#334155", lineHeight: 1.5 }}>
+              <li>Provided details and documents must be correct and authentic.</li>
+              <li>Application approval is subject to lender verification and policy checks.</li>
+              <li>Interest rate, tenure, and EMI may change after underwriting review.</li>
+              <li>Draft saves are for convenience and are not considered submitted applications.</li>
+              <li>Final sanction terms will override any preliminary values shown here.</li>
+            </ul>
+          </div>
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: "#1f2a44" }}>
+              <input
+                type="radio"
+                name="agreement_decision"
+                checked={agreementDecision === "accepted"}
+                onChange={() => setAgreementDecision("accepted")}
+              />
+              Accept Agreement
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: "#1f2a44" }}>
+              <input
+                type="radio"
+                name="agreement_decision"
+                checked={agreementDecision === "denied"}
+                onChange={() => setAgreementDecision("denied")}
+              />
+              Deny Agreement
+            </label>
+          </div>
+        </section>
+
+        <section style={{ marginBottom: 20, background: "rgba(255,255,255,0.6)", padding: "20px", borderRadius: 12, border: "1px solid rgba(180,193,220,0.3)" }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 4, display: "block" }}>
-            Additional Notes
+            Additional Notes<span style={{ color: "#e06d0a" }}> *</span>
           </label>
           <textarea
             className="input-field"
@@ -743,20 +890,37 @@ export default function ApplyLoan({ navigate, userEmail }) {
           </div>
         )}
 
+        {draftLoaded && !message && (
+          <div className="link-row" style={{ color: "#1a5fc4", marginTop: 4, marginBottom: 8 }}>
+            Draft loaded successfully. Continue and submit when ready.
+          </div>
+        )}
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 10 }}>
           <button
             className="home-btn-blue"
             style={{ width: "auto", padding: "10px 18px" }}
-            onClick={() => navigate("documentation")}
+            onClick={() => navigate("user-dashboard")}
           >
             Back
           </button>
 
-          <button className="btn-blue" onClick={handleApply} disabled={loading} style={{ padding: "10px 24px", fontSize: 14 }}>
-            {loading ? "Submitting..." : "Apply for Loan"}
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              className="home-btn-blue"
+              onClick={() => handleApply("draft")}
+              disabled={loading}
+              style={{ width: "auto", padding: "10px 16px", fontSize: 13 }}
+            >
+              {loading ? "Saving..." : "Save Draft"}
+            </button>
+            <button className="btn-blue" onClick={() => handleApply("submit")} disabled={loading} style={{ padding: "10px 24px", fontSize: 14, marginTop: 0 }}>
+              {loading ? "Submitting..." : "Apply for Loan"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

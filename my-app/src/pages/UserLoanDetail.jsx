@@ -109,7 +109,7 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
   const InfoRow = ({ label, value }) => (
     <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
       <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>{label}:</div>
-      <div style={{ color: "#2d3748" }}>{value ?? "—"}</div>
+      <div style={{ color: "#2d3748" }}>{value ?? "-"}</div>
     </div>
   );
 
@@ -271,58 +271,59 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
 
         <section style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid rgba(0,0,0,0.06)", marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Loan Information</div>
-          <InfoRow label="Loan Amount" value={`₹${Number(loan?.loan_amount || 0).toLocaleString()}`} />
+          <InfoRow label="Loan Amount" value={`Rs ${Number(loan?.loan_amount || 0).toLocaleString()}`} />
           <InfoRow label="Tenure" value={`${loan?.tenure} months`} />
           <InfoRow label="Interest Rate" value={`${loan?.interest_rate}%`} />
-          <InfoRow label="EMI" value={`₹${Number(loan?.emi || 0).toFixed(2)}`} />
+          <InfoRow label="EMI" value={`Rs ${Number(loan?.emi || 0).toFixed(2)}`} />
           <InfoRow label="Status" value={loan?.status} />
-          <InfoRow label="Applied Date" value={loan?.applied_date ? new Date(loan.applied_date).toLocaleString() : "—"} />
+          <InfoRow label="Applied Date" value={loan?.applied_date ? new Date(loan.applied_date).toLocaleString() : "-"} />
         </section>
 
         <section style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid rgba(0,0,0,0.06)" }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Applicant Details</div>
           <InfoRow label="Full Name" value={applicant?.full_name} />
-
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700, marginBottom: 4 }}>Contact Email:</div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
+            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Contact Email:</div>
             {editMode ? (
               <input
                 className="input-field"
                 type="email"
                 value={editForm.contact_email}
                 onChange={(e) => handleEditChange("contact_email", e.target.value)}
+                style={{ maxWidth: 360 }}
               />
             ) : (
               <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.contact_email || "—"}</div>
             )}
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700, marginBottom: 4 }}>Primary Mobile:</div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
+            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Primary Mobile:</div>
             {editMode ? (
               <input
                 className="input-field"
                 value={editForm.primary_mobile}
                 onChange={(e) => handleEditChange("primary_mobile", e.target.value)}
+                style={{ maxWidth: 260 }}
               />
             ) : (
               <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.primary_mobile || "—"}</div>
             )}
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700, marginBottom: 4 }}>Alternate Mobile:</div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
+            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Alternate Mobile:</div>
             {editMode ? (
               <input
                 className="input-field"
                 value={editForm.alternate_mobile}
                 onChange={(e) => handleEditChange("alternate_mobile", e.target.value)}
+                style={{ maxWidth: 260 }}
               />
             ) : (
               <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.alternate_mobile || "—"}</div>
             )}
           </div>
-
           <InfoRow label="Date of Birth" value={applicant?.dob} />
           <InfoRow label="Address Line 1" value={applicant?.address_line1} />
           <InfoRow label="Address Line 2" value={applicant?.address_line2} />
@@ -331,7 +332,7 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
           <InfoRow label="Postal Code" value={applicant?.postal_code} />
           <InfoRow label="PAN Number" value={applicant?.pan_number} />
           <InfoRow label="Aadhaar Number" value={applicant?.aadhaar_number} />
-          <InfoRow label="Monthly Income" value={applicant?.monthly_income != null ? `₹${Number(applicant.monthly_income).toLocaleString()}` : "—"} />
+          <InfoRow label="Monthly Income" value={applicant?.monthly_income != null ? `Rs ${Number(applicant.monthly_income).toLocaleString()}` : "-"} />
           <InfoRow label="Employer" value={applicant?.employer_name} />
           <InfoRow label="Employment Type" value={applicant?.employment_type} />
           <InfoRow label="Loan Purpose" value={applicant?.loan_purpose} />
@@ -341,3 +342,5 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
     </div>
   );
 }
+
+

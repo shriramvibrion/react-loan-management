@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLoanDetail from "./pages/AdminLoanDetail";
 import Documentation from "./pages/Documentation";
 import UserDashboard from "./pages/UserDashboard";
+import UserLoanAnalytics from "./pages/UserLoanAnalytics";
 import UserLoanDetail from "./pages/UserLoanDetail";
 import ApplyLoan from "./pages/ApplyLoan";
 import bgImage from "./images/img.png";
@@ -426,6 +427,13 @@ export default function App() {
       case "user-dashboard":
         return (
           <UserDashboard
+            navigate={navigate}
+            userEmail={userEmail}
+          />
+        );
+      case "user-analytics":
+        return (
+          <UserLoanAnalytics
             navigate={navigate}
             userEmail={userEmail}
           />
