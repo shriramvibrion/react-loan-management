@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-
-const API = "http://localhost:5000";
+import { API_BASE_URL } from "../api";
+import {
+  fetchUserLoanDetail,
+  updateUserLoanContact,
+} from "../loanService";
 
 export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) {
   const [data, setData] = useState(null);
@@ -23,32 +26,25 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
       return;
     }
 
-    const fetchDetail = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setMessage("");
-        const res = await fetch(
-          `${API}/api/user/loans/${loanId}?email=${encodeURIComponent(userEmail || "")}`
-        );
-        const json = await res.json();
-        if (res.ok) {
-          setData(json);
-          setEditForm({
-            contact_email: json?.applicant?.contact_email || "",
-            primary_mobile: json?.applicant?.primary_mobile || "",
-            alternate_mobile: json?.applicant?.alternate_mobile || "",
-          });
-        } else {
-          setMessage(json.error || json.message || "Failed to load loan details.");
-        }
+        const json = await fetchUserLoanDetail(loanId, userEmail);
+        setData(json);
+        setEditForm({
+          contact_email: json?.applicant?.contact_email || "",
+          primary_mobile: json?.applicant?.primary_mobile || "",
+          alternate_mobile: json?.applicant?.alternate_mobile || "",
+        });
       } catch (err) {
-        setMessage("Server error. Please try again.");
+        setMessage(err.message || "Failed to load loan details.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDetail();
+    load();
   }, [loanId, userEmail]);
 
   const handleEditChange = (field, value) => {
@@ -65,40 +61,25 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
       setSaving(true);
       setMessage("");
 
-      const res = await fetch(`${API}/api/user/loans/${loanId}/contact`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: userEmail,
-          contact_email: editForm.contact_email,
-          primary_mobile: editForm.primary_mobile,
-          alternate_mobile: editForm.alternate_mobile,
-        }),
-      });
+      const json = await updateUserLoanContact(loanId, userEmail, editForm);
 
-      const json = await res.json();
-
-      if (res.ok) {
-        setMessage(json.message || "Updated successfully.");
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                applicant: {
-                  ...prev.applicant,
-                  contact_email: editForm.contact_email,
-                  primary_mobile: editForm.primary_mobile,
-                  alternate_mobile: editForm.alternate_mobile,
-                },
-              }
-            : prev
-        );
-        setEditMode(false);
-      } else {
-        setMessage(json.error || json.message || "Failed to update.");
-      }
+      setMessage(json.message || "Updated successfully.");
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              applicant: {
+                ...prev.applicant,
+                contact_email: editForm.contact_email,
+                primary_mobile: editForm.primary_mobile,
+                alternate_mobile: editForm.alternate_mobile,
+              },
+            }
+          : prev
+      );
+      setEditMode(false);
     } catch (err) {
-      setMessage("Server error. Please try again.");
+      setMessage(err.message || "Failed to update.");
     } finally {
       setSaving(false);
     }
@@ -254,7 +235,7 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
                     <div style={{ fontSize: 12, color: "#667085" }}>{doc.original_filename}</div>
                   </div>
                   <a
-                    href={`${API}/api/admin/document/${doc.document_id}`}
+                    href={`${API_BASE_URL}/api/admin/document/${doc.document_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ fontSize: 12, fontWeight: 800, color: "#1a5fc4", textDecoration: "none" }}

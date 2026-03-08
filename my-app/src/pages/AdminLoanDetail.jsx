@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-
-const API = "http://localhost:5000";
+import { API_BASE_URL } from "../api";
+import {
+  fetchAdminLoanDetail,
+  updateAdminLoanStatus,
+} from "../loanService";
 
 function monthDiff(fromDate, toDate) {
   const years = toDate.getFullYear() - fromDate.getFullYear();
@@ -21,23 +24,19 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
       return;
     }
 
-    const fetchDetail = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API}/api/admin/loans/${loanId}`);
-        const json = await res.json();
-        if (res.ok) {
-          setData(json);
-        } else {
-          setMessage(json.error || "Failed to load loan details.");
-        }
+        const json = await fetchAdminLoanDetail(loanId);
+        setData(json);
+        setMessage("");
       } catch (err) {
-        setMessage("Server error. Please try again.");
+        setMessage(err.message || "Failed to load loan details.");
       } finally {
         setLoading(false);
       }
     };
-    fetchDetail();
+    load();
   }, [loanId]);
 
   const handleStatusUpdate = async (newStatus) => {
@@ -45,22 +44,13 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
     try {
       setActionLoading(true);
       setMessage("");
-      const res = await fetch(`${API}/api/admin/loans/${loanId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setMessage(json.message || `Loan ${newStatus.toLowerCase()}.`);
-        setData((prev) =>
-          prev ? { ...prev, loan: { ...prev.loan, status: newStatus } } : null
-        );
-      } else {
-        setMessage(json.error || "Failed to update status.");
-      }
+      const json = await updateAdminLoanStatus(loanId, newStatus);
+      setMessage(json.message || `Loan ${newStatus.toLowerCase()}.`);
+      setData((prev) =>
+        prev ? { ...prev, loan: { ...prev.loan, status: newStatus } } : null
+      );
     } catch (err) {
-      setMessage("Server error. Please try again.");
+      setMessage(err.message || "Failed to update status.");
     } finally {
       setActionLoading(false);
     }
@@ -139,7 +129,7 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
   }
 
   const { loan, applicant, documents } = data || {};
-  const docViewUrl = (docId) => `${API}/api/admin/document/${docId}`;
+  const docViewUrl = (docId) => `${API_BASE_URL}/api/admin/document/${docId}`;
   const status = (loan?.status || "").toLowerCase();
   const isAccepted = status === "approved" || status === "accepted";
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { fetchUserLoans } from "../loanService";
 
 const statusTheme = {
   Draft: {
@@ -55,28 +56,20 @@ export default function UserDashboard({ navigate, userEmail }) {
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
 
   useEffect(() => {
-    const fetchLoans = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `http://localhost:5000/api/user/loans?email=${encodeURIComponent(
-            userEmail || ""
-          )}`
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setLoans(data.loans || []);
-        } else {
-          setMessage(data.message || "Failed to load loans.");
-        }
+        const items = await fetchUserLoans(userEmail);
+        setLoans(items);
+        setMessage("");
       } catch (err) {
-        setMessage("Server error. Please try again.");
+        setMessage(err.message || "Failed to load loans.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (userEmail) fetchLoans();
+    if (userEmail) load();
     else {
       setLoading(false);
       setMessage("No user session. Please login again.");

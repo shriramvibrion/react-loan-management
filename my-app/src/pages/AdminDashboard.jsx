@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import DashboardLayout from "../layouts/DashboardLayout";
+import { fetchAdminLoans } from "../loanService";
+import Button from "../components/ui/Button";
+import Badge from "../components/ui/Badge";
+import Card from "../components/ui/Card";
 
 export default function AdminDashboard({ navigate, onLogout }) {
   const [loans, setLoans] = useState([]);
@@ -9,23 +14,19 @@ export default function AdminDashboard({ navigate, onLogout }) {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    const fetchLoans = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://localhost:5000/api/admin/loans");
-        const data = await res.json();
-        if (res.ok) {
-          setLoans(data.loans || []);
-        } else {
-          setMessage(data.error || "Failed to load loans.");
-        }
+        const items = await fetchAdminLoans();
+        setLoans(items);
+        setMessage("");
       } catch (err) {
-        setMessage("Server error. Please try again.");
+        setMessage(err.message || "Failed to load loans.");
       } finally {
         setLoading(false);
       }
     };
-    fetchLoans();
+    load();
   }, []);
 
   const getStatusStyle = (status) => {
@@ -82,196 +83,141 @@ export default function AdminDashboard({ navigate, onLogout }) {
   const countRejected = normalizedLoans.filter((l) => l._status === "rejected").length;
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        width: "100vw",
-        padding: "22px 18px",
-        boxSizing: "border-box",
-        background:
-          "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)",
-        overflowX: "hidden",
-        overflowY: "auto",
-        color: "#2d3748",
-      }}
-    >
+    <DashboardLayout variant="orange">
+      {/* Header bar */}
       <div
         style={{
-          width: "min(1120px, 96vw)",
-          margin: "0 auto",
-          background: "rgba(255,255,255,0.55)",
-          border: "1px solid rgba(255,255,255,0.65)",
-          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-          borderRadius: 18,
-          padding: 18,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 18,
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
-        {/* Header bar */}
+        <div>
+          <div
+            style={{
+              fontFamily: "Montserrat, sans-serif",
+              fontSize: 24,
+              fontWeight: 900,
+              color: "#FF8A33",
+            }}
+          >
+            Loan Applications
+          </div>
+          <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+            Review, verify documents, and approve or reject requests.
+          </div>
+        </div>
+
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            gap: 10,
             alignItems: "center",
-            marginBottom: 18,
-            flexWrap: "wrap",
-            gap: 12,
+            flexWrap: "nowrap",
+            justifyContent: "space-between",
+            flex: 1,
+            minWidth: 420,
+            paddingBottom: 2,
           }}
         >
-          <div>
-            <div
-              style={{
-                fontFamily: "Montserrat, sans-serif",
-                fontSize: 24,
-                fontWeight: 900,
-                color: "#FF8A33",
-              }}
-            >
-              Loan Applications
-            </div>
-            <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
-              Review, verify documents, and approve or reject requests.
-            </div>
-          </div>
-
-          <div
+          <input
+            className="input-field input-field-orange"
+            placeholder="Search by loan id / name / email / status"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "nowrap",
-              justifyContent: "space-between",
               flex: 1,
-              minWidth: 420,
-              paddingBottom: 2,
+              minWidth: 220,
+              background: "rgba(255,255,255,0.9)",
+              color: "#2d3748",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              border: "1px solid rgba(255,138,51,0.35)",
             }}
-          >
-            <input
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <select
               className="input-field input-field-orange"
-              placeholder="Search by loan id / name / email / status"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               style={{
-                flex: 1,
-                minWidth: 220,
+                width: 170,
                 background: "rgba(255,255,255,0.9)",
                 color: "#2d3748",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                 border: "1px solid rgba(255,138,51,0.35)",
               }}
-            />
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <select
-                className="input-field input-field-orange"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{
-                  width: 170,
-                  background: "rgba(255,255,255,0.9)",
-                  color: "#2d3748",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                  border: "1px solid rgba(255,138,51,0.35)",
-                }}
+            >
+              <option value="all">All Status</option>
+              <option value="accepted">Accepted</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <div style={{ display: "flex", gap: 6 }}>
+              <Button
+                variant={viewMode === "container" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("container")}
+                title="Container View"
+                style={{ borderRadius: 8, padding: "8px 12px", fontSize: 14 }}
               >
-                <option value="all">All Status</option>
-                <option value="accepted">Accepted</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  onClick={() => setViewMode("container")}
-                  style={{
-                    padding: "8px 12px",
-                    background: viewMode === "container" ? "#FF8A33" : "rgba(255,255,255,0.9)",
-                    color: viewMode === "container" ? "#fff" : "#FF8A33",
-                    border: "1px solid rgba(255,138,51,0.5)",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    fontSize: 18,
-                    transition: "all 0.2s",
-                  }}
-                  title="Container View"
-                >
-                  ⊞
-                </button>
-                <button
-                  onClick={() => setViewMode("list")}
-                  style={{
-                    padding: "8px 12px",
-                    background: viewMode === "list" ? "#FF8A33" : "rgba(255,255,255,0.9)",
-                    color: viewMode === "list" ? "#fff" : "#FF8A33",
-                    border: "1px solid rgba(255,138,51,0.5)",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    fontSize: 18,
-                    transition: "all 0.2s",
-                  }}
-                  title="List View"
-                >
-                  ☰
-                </button>
-              </div>
-              <button
-                className="home-btn-orange"
-                style={{
-                  width: "auto",
-                  padding: "10px 18px",
-                  background: "rgba(255,255,255,0.9)",
-                  color: "#FF8A33",
-                  border: "1px solid rgba(255,138,51,0.5)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                }}
-                onClick={() => onLogout && onLogout()}
+                ⊞
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                title="List View"
+                style={{ borderRadius: 8, padding: "8px 12px", fontSize: 14 }}
               >
-                Logout
-              </button>
+                ☰
+              </Button>
             </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onLogout && onLogout()}
+            >
+              Logout
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Summary */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-            gap: 12,
-            marginBottom: 16,
-          }}
-        >
-          {[
-            { label: "Total", value: normalizedLoans.length, accent: "#FF8A33" },
-            { label: "Pending", value: countPending, accent: "#FF8A33" },
-            { label: "Approved", value: countApproved, accent: "#16a34a" },
-            { label: "Rejected", value: countRejected, accent: "#dc2626" },
-          ].map((s) => (
+      {/* Summary */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        {[
+          { label: "Total", value: normalizedLoans.length, accent: "#FF8A33" },
+          { label: "Pending", value: countPending, accent: "#FF8A33" },
+          { label: "Approved", value: countApproved, accent: "#16a34a" },
+          { label: "Rejected", value: countRejected, accent: "#dc2626" },
+        ].map((s) => (
+          <Card key={s.label}>
+            <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>
+              {s.label}
+            </div>
             <div
-              key={s.label}
               style={{
-                background: "rgba(255,255,255,0.9)",
-                border: "1px solid rgba(0,0,0,0.05)",
-                borderRadius: 14,
-                padding: "12px 14px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                fontSize: 22,
+                fontWeight: 900,
+                color: s.accent,
+                marginTop: 4,
               }}
             >
-              <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>
-                {s.label}
-              </div>
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 900,
-                  color: s.accent,
-                  marginTop: 4,
-                }}
-              >
-                {s.value}
-              </div>
+              {s.value}
             </div>
-          ))}
-        </div>
+          </Card>
+        ))}
+      </div>
 
         {loading && (
           <div style={{ fontSize: 15, color: "#5a6578", marginBottom: 16 }}>
@@ -280,7 +226,17 @@ export default function AdminDashboard({ navigate, onLogout }) {
         )}
 
         {message && !loading && (
-          <div style={{ color: "#FF8A33", marginBottom: 16 }}>{message}</div>
+          <Card
+            style={{
+              marginBottom: 16,
+              background: "rgba(255,138,51,0.06)",
+              border: "1px solid rgba(255,138,51,0.35)",
+              color: "#FF8A33",
+              fontWeight: 700,
+            }}
+          >
+            {message}
+          </Card>
         )}
 
         {!loading && !message && loans.length === 0 && (
@@ -306,31 +262,29 @@ export default function AdminDashboard({ navigate, onLogout }) {
           >
             {filteredLoans.map((loan) => {
               const st = getStatusStyle(loan.status);
+              const tone =
+                st.bg === "#d4edda"
+                  ? "success"
+                  : st.bg === "#f8d7da"
+                  ? "danger"
+                  : "warning";
               return (
-                <div
+                <Card
                   key={loan.loan_id}
-                  onClick={() => handleLoanClick(loan.loan_id)}
                   style={{
-                    background: "rgba(255,255,255,0.92)",
-                    borderRadius: 14,
-                    padding: "16px 18px",
-                    border: "1px solid rgba(0,0,0,0.06)",
                     cursor: "pointer",
                     transition: "transform 0.2s, box-shadow 0.2s",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
                   }}
+                  onClick={() => handleLoanClick(loan.loan_id)}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-3px)";
                     e.currentTarget.style.boxShadow =
                       "0 10px 26px rgba(0,0,0,0.12)";
-                    e.currentTarget.style.borderColor =
-                      "rgba(255,138,51,0.35)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow =
-                      "0 2px 10px rgba(0,0,0,0.06)";
-                    e.currentTarget.style.borderColor = "rgba(0,0,0,0.06)";
+                      "0 4px 16px rgba(15,23,42,0.08)";
                   }}
                 >
                   <div
@@ -350,18 +304,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                     >
                       Loan #{displayIdMap.get(loan.loan_id)}
                     </span>
-                    <span
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        background: st.bg,
-                        color: st.color,
-                      }}
-                    >
-                      {loan.status}
-                    </span>
+                    <Badge tone={tone}>{loan.status}</Badge>
                   </div>
 
                   <div
@@ -371,9 +314,15 @@ export default function AdminDashboard({ navigate, onLogout }) {
                       lineHeight: 1.7,
                     }}
                   >
-                    <div><strong>User ID:</strong> {loan.user_id}</div>
-                    <div><strong>Name:</strong> {loan.user_name || "N/A"}</div>
-                    <div style={{ wordBreak: "break-word" }}><strong>Email:</strong> {loan.user_email}</div>
+                    <div>
+                      <strong>User ID:</strong> {loan.user_id}
+                    </div>
+                    <div>
+                      <strong>Name:</strong> {loan.user_name || "N/A"}
+                    </div>
+                    <div style={{ wordBreak: "break-word" }}>
+                      <strong>Email:</strong> {loan.user_email}
+                    </div>
                   </div>
 
                   <div
@@ -386,7 +335,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   >
                     Click to view full details →
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
@@ -458,8 +407,6 @@ export default function AdminDashboard({ navigate, onLogout }) {
               No results for “{query.trim()}”.
             </div>
           )}
-      </div>
-    </div>
+      </DashboardLayout>
   );
 }
-

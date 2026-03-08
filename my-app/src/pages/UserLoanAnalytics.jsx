@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { fetchUserLoans } from "../loanService";
 
 function normalizeLoan(loan) {
   const status = (loan.status || "").toLowerCase();
@@ -20,25 +21,20 @@ export default function UserLoanAnalytics({ navigate, userEmail }) {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const fetchLoans = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `http://localhost:5000/api/user/loans?email=${encodeURIComponent(
-            userEmail || ""
-          )}`
-        );
-        const data = await res.json();
-        if (res.ok) setLoans(data.loans || []);
-        else setMessage(data.message || "Failed to load analytics.");
+        const items = await fetchUserLoans(userEmail);
+        setLoans(items);
+        setMessage("");
       } catch (err) {
-        setMessage("Server error. Please try again.");
+        setMessage(err.message || "Failed to load analytics.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (userEmail) fetchLoans();
+    if (userEmail) load();
     else {
       setLoading(false);
       setMessage("No user session. Please login again.");
