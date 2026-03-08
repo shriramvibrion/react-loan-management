@@ -196,9 +196,19 @@ def apply_loan():
     if monthly_rate == 0:
         emi = loan_amount / tenure
     else:
-        emi = loan_amount * monthly_rate * ((1 + monthly_rate) ** tenure) / (
-            (1 + monthly_rate) ** tenure - 1
-        )
+        try:
+            if tenure > 1200:
+                from flask import jsonify
+                return jsonify({"error": "Tenure exceeds maximum allowable value (1200 months)."}), 400
+            if interest_rate > 100:
+                from flask import jsonify
+                return jsonify({"error": "Interest rate cannot exceed 100%."}), 400
+            emi = loan_amount * monthly_rate * ((1 + monthly_rate) ** tenure) / (
+                (1 + monthly_rate) ** tenure - 1
+            )
+        except OverflowError:
+            from flask import jsonify
+            return jsonify({"error": "Interest calculation resulted in a math overflow. Please verify tenure and interest rate inputs."}), 400
 
     agreement_prefix = f"[Agreement: {agreement_decision.capitalize()}]"
     notes = f"{agreement_prefix} {notes}".strip() if notes else agreement_prefix

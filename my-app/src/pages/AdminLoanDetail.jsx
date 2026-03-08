@@ -1,21 +1,67 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import {
   fetchAdminLoanDetail,
   updateAdminLoanStatus,
-} from "../loanService";
+} from "../services/loanService";
+import { monthDiff } from "../utils/loanUtils";
+import Loader from "../components/ui/Loader";
+import { useToast } from "../context/ToastContext";
 
-function monthDiff(fromDate, toDate) {
-  const years = toDate.getFullYear() - fromDate.getFullYear();
-  const months = toDate.getMonth() - fromDate.getMonth();
-  return years * 12 + months;
+function Section({ title, children }) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 14,
+        padding: 18,
+        marginBottom: 16,
+        border: "1px solid rgba(0,0,0,0.06)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "#FF8A33",
+          marginBottom: 12,
+        }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  );
 }
 
-export default function AdminLoanDetail({ navigate, loanId, onBack }) {
+function InfoRow({ label, value }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        marginBottom: 8,
+        fontSize: 14,
+      }}
+    >
+      <span style={{ color: "#5a6578", minWidth: 140 }}>{label}:</span>
+      <span style={{ color: "#2d3748" }}>{value ?? "-"}</span>
+    </div>
+  );
+}
+
+export default function AdminLoanDetail() {
+  const navigate = useNavigate();
+  const { loanId } = useParams();
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  const onBack = () => navigate("/admin/dashboard");
 
   useEffect(() => {
     if (!loanId) {
@@ -45,6 +91,7 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
       setActionLoading(true);
       setMessage("");
       const json = await updateAdminLoanStatus(loanId, newStatus);
+      toast.success(json.message || `Loan ${newStatus.toLowerCase()}.`);
       setMessage(json.message || `Loan ${newStatus.toLowerCase()}.`);
       setData((prev) =>
         prev ? { ...prev, loan: { ...prev.loan, status: newStatus } } : null
@@ -66,29 +113,12 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
           padding: 22,
           background:
             "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)",
-          color: "#2d3748",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <div
-          style={{
-            width: "min(1120px, 96vw)",
-            margin: "0 auto",
-            background: "rgba(255,255,255,0.55)",
-            border: "1px solid rgba(255,255,255,0.65)",
-            boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-            borderRadius: 18,
-            padding: 18,
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            textAlign: "center",
-            fontWeight: 700,
-          }}
-        >
-          Loading loan details...
-        </div>
+        <Loader text="Loading loan details..." size={36} />
       </div>
     );
   }
@@ -120,7 +150,7 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
           <div style={{ color: "#FF8A33", marginBottom: 16, fontWeight: 700 }}>
             {message}
           </div>
-          <button className="home-btn-orange" onClick={() => onBack()}>
+          <button className="home-btn-orange" onClick={onBack}>
             Back to Dashboard
           </button>
         </div>
@@ -144,45 +174,6 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
   const remainingAmount = Math.max(0, amount - paidAmount);
   const paidPercent = amount > 0 ? Math.round((paidAmount / amount) * 100) : 0;
   const monthPercent = tenure > 0 ? Math.round((completedMonths / tenure) * 100) : 0;
-
-  const Section = ({ title, children }) => (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        padding: 18,
-        marginBottom: 16,
-        border: "1px solid rgba(0,0,0,0.06)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 16,
-          fontWeight: 700,
-          color: "#FF8A33",
-          marginBottom: 12,
-        }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-
-  const InfoRow = ({ label, value }) => (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        marginBottom: 8,
-        fontSize: 14,
-      }}
-    >
-      <span style={{ color: "#5a6578", minWidth: 140 }}>{label}:</span>
-      <span style={{ color: "#2d3748" }}>{value ?? "-"}</span>
-    </div>
-  );
 
   return (
     <div
@@ -248,14 +239,14 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
                   status === "pending"
                     ? "#fff3cd"
                     : status === "rejected"
-                    ? "#f8d7da"
-                    : "#d4edda",
+                      ? "#f8d7da"
+                      : "#d4edda",
                 color:
                   status === "pending"
                     ? "#856404"
                     : status === "rejected"
-                    ? "#721c24"
-                    : "#155724",
+                      ? "#721c24"
+                      : "#155724",
               }}
             >
               {loan?.status}
@@ -270,7 +261,7 @@ export default function AdminLoanDetail({ navigate, loanId, onBack }) {
                 border: "1px solid rgba(255,138,51,0.5)",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}
-              onClick={() => onBack()}
+              onClick={onBack}
             >
               Back to Dashboard
             </button>

@@ -1,0 +1,50 @@
+.ds-input-wrapper {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-input-full {
+  width: 100%;
+}
+
+.ds-input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color, #334155);
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.ds-input {
+  padding: 12px 16px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  background-color: #f8fafc;
+}
+
+.ds-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #2563eb);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ds-input-error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.ds-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.ds-input-error-text {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 4px;
+  text-align: left;
+}

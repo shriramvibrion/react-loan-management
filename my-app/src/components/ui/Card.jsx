@@ -1,17 +1,19 @@
-export default function Card({ children, style }) {
+import React from "react";
+
+export default function Card({ children, className = "", padding = "24px", ...props }) {
   return (
     <div
+      className={`ds-card ${className}`}
       style={{
-        background: "rgba(255,255,255,0.96)",
-        borderRadius: 14,
-        padding: "12px 14px",
-        border: "1px solid rgba(15,23,42,0.06)",
-        boxShadow: "0 4px 16px rgba(15,23,42,0.08)",
-        ...style,
+        background: "white",
+        borderRadius: "16px",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        padding: padding,
+        border: "1px solid #e2e8f0",
       }}
+      {...props}
     >
       {children}
     </div>
   );
 }
-

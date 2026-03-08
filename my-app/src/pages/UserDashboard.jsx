@@ -1,436 +1,184 @@
-import { useEffect, useMemo, useState } from "react";
-import { fetchUserLoans } from "../loanService";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import DashboardLayout from "../layouts/DashboardLayout";
+import { getStatusStyle } from "../utils/loanUtils";
+import { useDashboardData } from "../hooks/useDashboardData";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Badge from "../components/ui/Badge";
+import Loader from "../components/ui/Loader";
+import EmptyState from "../components/ui/EmptyState";
 
-const statusTheme = {
-  Draft: {
-    pillBg: "#e5e7eb",
-    pillColor: "#334155",
-    rowBorder: "#cfd5df",
-    progress: 12,
-    note: "Saved as draft",
-    headingBg: "#f1f5f9",
-    headingColor: "#334155",
-  },
-  Pending: {
-    pillBg: "#fff0cf",
-    pillColor: "#7b5a00",
-    rowBorder: "#ead59b",
-    progress: 25,
-    note: "Awaiting review",
-    headingBg: "#eef4ff",
-    headingColor: "#1a5fc4",
-  },
-  Accepted: {
-    pillBg: "#dff4e5",
-    pillColor: "#1f7a3f",
-    rowBorder: "#bee4cb",
-    progress: 58,
-    note: "Schedule active",
-    headingBg: "#eaf8ef",
-    headingColor: "#1f7a3f",
-  },
-  Rejected: {
-    pillBg: "#ffe0e0",
-    pillColor: "#a12727",
-    rowBorder: "#edbcbc",
-    progress: 100,
-    note: "See reason in details",
-    headingBg: "#fff0f0",
-    headingColor: "#d62828",
-  },
-};
+export default function UserDashboard() {
+  const navigate = useNavigate();
+  const { userEmail, logout } = useAuth();
+  
+  const { loans, loading, message, bucketCounts, displayIdMap } = useDashboardData(userEmail);
 
-function normalizeLoan(loan) {
-  const status = (loan.status || "").toLowerCase();
-  let bucket = "Pending";
-  if (status === "draft") bucket = "Draft";
-  if (status === "rejected") bucket = "Rejected";
-  else if (status === "approved" || status === "accepted") bucket = "Accepted";
-  return { ...loan, bucket };
-}
+  const [tab, setTab] = useState("all");
+  const [expandedCard, setExpandedCard] = useState(null);
 
-export default function UserDashboard({ navigate, userEmail }) {
-  const [loans, setLoans] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [hasLocalDraft, setHasLocalDraft] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const items = await fetchUserLoans(userEmail);
-        setLoans(items);
-        setMessage("");
-      } catch (err) {
-        setMessage(err.message || "Failed to load loans.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (userEmail) load();
-    else {
-      setLoading(false);
-      setMessage("No user session. Please login again.");
-    }
-  }, [userEmail]);
-
-  useEffect(() => {
-    if (!userEmail) {
-      setHasLocalDraft(false);
-      return;
-    }
-    const key = `loan_draft_${userEmail}`;
-    setHasLocalDraft(Boolean(localStorage.getItem(key)));
-  }, [userEmail]);
-
-  const normalizedLoans = useMemo(() => loans.map(normalizeLoan), [loans]);
-  const visibleLoans = normalizedLoans.filter((l) => l.bucket !== "Draft");
-  const pendingLoans = visibleLoans.filter((l) => l.bucket === "Pending");
-  const acceptedLoans = visibleLoans.filter((l) => l.bucket === "Accepted");
-  const rejectedLoans = visibleLoans.filter((l) => l.bucket === "Rejected");
-  const hasAnyLoans = visibleLoans.length > 0;
-  const totalAmount = visibleLoans.reduce(
-    (sum, loan) => sum + Number(loan.loan_amount || 0),
-    0
-  );
-
-  const renderLoanRow = (loan) => {
-    const meta = statusTheme[loan.bucket] || statusTheme.Pending;
-    return (
-      <div
-        key={loan.loan_id}
-        style={{
-          background: "#fff",
-          border: `1px solid ${meta.rowBorder}`,
-          borderRadius: 12,
-          padding: "11px 12px",
-          boxShadow: "0 3px 10px rgba(15,23,42,0.08)",
-          marginBottom: 10,
-          cursor: "pointer",
-        }}
-        onClick={() => navigate("user-loan-detail", { userLoanId: loan.loan_id })}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "95px 1fr 150px 92px",
-            gap: 10,
-            alignItems: "center",
-          }}
-        >
-          <span
-            style={{
-              display: "inline-block",
-              textAlign: "center",
-              padding: "5px 10px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 800,
-              background: meta.pillBg,
-              color: meta.pillColor,
-            }}
-          >
-            {loan.bucket}
-          </span>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1.2fr 0.9fr 1fr",
-              gap: 10,
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>
-                Loan #{loan.loan_id}
-              </div>
-              <div style={{ fontSize: 13, color: "#1f2a44", fontWeight: 700 }}>
-                Rs {Number(loan.loan_amount || 0).toLocaleString()}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#4b5565", fontWeight: 700 }}>Tenure</div>
-              <div style={{ fontSize: 13, color: "#0f172a", fontWeight: 700 }}>
-                {loan.tenure} months
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#4b5565", fontWeight: 700 }}>Applied</div>
-              <div style={{ fontSize: 13, color: "#0f172a", fontWeight: 700 }}>
-                {loan.applied_date
-                  ? new Date(loan.applied_date).toLocaleDateString()
-                  : "N/A"}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 11, color: "#3f4b62", marginBottom: 4, fontWeight: 700 }}>
-              Insight
-            </div>
-            <div
-              style={{
-                width: "100%",
-                height: 6,
-                borderRadius: 999,
-                background: "#e4e9f3",
-                overflow: "hidden",
-                marginBottom: 4,
-              }}
-            >
-              <div
-                style={{
-                  width: `${meta.progress}%`,
-                  height: "100%",
-                  background:
-                    loan.bucket === "Rejected"
-                      ? "#d15353"
-                      : loan.bucket === "Accepted"
-                      ? "#2f9b57"
-                      : "#be8c11",
-                }}
-              />
-            </div>
-            <div style={{ fontSize: 10, color: "#5f6b83" }}>{meta.note}</div>
-          </div>
-
-          <div
-            style={{
-              textAlign: "right",
-              color: "#1a4ea1",
-              fontWeight: 800,
-              fontSize: 12,
-            }}
-          >
-            View
-          </div>
-        </div>
-      </div>
-    );
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
+  const tabs = [
+    { key: "all", label: "All" },
+    { key: "Draft", label: "Draft" },
+    { key: "Pending", label: "Pending" },
+    { key: "Accepted", label: "Accepted" },
+    { key: "Rejected", label: "Rejected" },
+  ];
+
+  const filteredLoans = tab === "all" ? loans : loans.filter((l) => l.bucket === tab);
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        width: "100vw",
-        padding: "18px",
-        boxSizing: "border-box",
-        background:
-          "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1380,
-          margin: "0 auto",
-          background: "#eef3f8",
-          border: "1px solid #d6dfeb",
-          borderRadius: 20,
-          padding: "16px",
-          boxShadow: "0 14px 30px rgba(17,24,39,0.12)",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: 12,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontFamily: "Montserrat, sans-serif",
-                fontSize: 34,
-                fontWeight: 800,
-                color: "#0f172a",
-                lineHeight: 1.1,
-              }}
-            >
-              My Loans
-            </div>
-            <div style={{ fontSize: 16, marginTop: 3, color: "#334155" }}>
-              {userEmail ? `Welcome, ${userEmail}` : "Welcome"}
-            </div>
+    <DashboardLayout>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 24, fontWeight: 900, color: "#1a5fc4" }}>
+            My Loan Applications
           </div>
-          {hasLocalDraft && (
-            <button
-              className="home-btn-blue"
-              style={{ width: "auto", padding: "10px 14px" }}
-              onClick={() => navigate("apply-loan")}
-            >
-              Draft
-            </button>
-          )}
+          <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+            Track your loans and their status
+          </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 10,
-            marginBottom: 12,
-          }}
-        >
-          {[
-            { title: "Total Loans", value: visibleLoans.length },
-            { title: "Pending", value: pendingLoans.length },
-            { title: "Accepted", value: acceptedLoans.length },
-            { title: "Rejected", value: rejectedLoans.length },
-            {
-              title: "Total Active/Pending Amount",
-              value: `Rs ${totalAmount.toLocaleString()}`,
-            },
-          ].map((item) => (
-            <div
-              key={item.title}
-              style={{
-                background: "#fff",
-                border: "1px solid #d9e0ea",
-                borderRadius: 12,
-                padding: "10px 12px",
-                boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
-              }}
-            >
-              <div style={{ fontSize: 13, color: "#4b5565", marginBottom: 4, fontWeight: 700 }}>
-                {item.title}
-              </div>
-              <div style={{ fontSize: 30, color: "#0f172a", fontWeight: 800, lineHeight: 1.1 }}>
-                {item.value}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {loading && <div style={{ fontSize: 14, color: "#334155", fontWeight: 700 }}>Loading...</div>}
-
-        {message && !loading && (
-          <div
-            style={{
-              background: "#fff6eb",
-              border: "1px solid #ffd9af",
-              color: "#9b4f00",
-              borderRadius: 12,
-              padding: "10px 12px",
-              fontWeight: 700,
-            }}
-          >
-            {message}
-          </div>
-        )}
-
-        {!loading && !message && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "270px 1fr 190px",
-              gap: 10,
-              alignItems: "start",
-            }}
-          >
-            <div
-              style={{
-                background: "#fff",
-                border: "1px solid #d9e0ea",
-                borderRadius: 12,
-                padding: "12px",
-                boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
-                minHeight: 270,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "Montserrat, sans-serif",
-                  fontSize: 24,
-                  fontWeight: 800,
-                  color: "#111827",
-                  marginBottom: 10,
-                }}
-              >
-                My Applications
-              </div>
-              {pendingLoans.length === 0 ? (
-                <div style={{ textAlign: "center", marginTop: 30 }}>
-                  <div style={{ fontSize: 40, color: "#c3cad8", lineHeight: 1 }}>[]</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#111827", marginTop: 8 }}>
-                    No pending applications
-                  </div>
-                  <div style={{ fontSize: 13, color: "#4b5565", marginTop: 4 }}>
-                    Click "Apply for Loan" to start.
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 14, color: "#1f2a44", lineHeight: 1.6 }}>
-                  {pendingLoans.length} application
-                  {pendingLoans.length > 1 ? "s are" : " is"} currently pending review.
-                </div>
-              )}
-
-            </div>
-
-            <div>
-              {!hasAnyLoans ? (
-                <div
-                  style={{
-                    background: "#fff",
-                    border: "1px solid #d9e0ea",
-                    borderRadius: 12,
-                    padding: "16px 14px",
-                    boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>No loan records found</div>
-                  <div style={{ fontSize: 13, color: "#4b5565", marginTop: 4 }}>
-                    Apply for a loan to track status and details.
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {acceptedLoans.map(renderLoanRow)}
-                  {pendingLoans.map(renderLoanRow)}
-                  {rejectedLoans.map(renderLoanRow)}
-                </>
-              )}
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button
-                className="btn-blue"
-                style={{ width: "100%", marginTop: 0, padding: "10px 12px" }}
-                onClick={() => navigate("apply-loan")}
-              >
-                Apply for Loan
-              </button>
-              <button
-                className="home-btn-blue"
-                style={{ width: "100%", padding: "10px 12px" }}
-                onClick={() => navigate("user-analytics")}
-              >
-                View Dashboard
-              </button>
-              <button
-                className="home-btn-blue"
-                style={{ width: "100%", padding: "10px 12px" }}
-                onClick={() => navigate("documentation")}
-              >
-                Back to Documentation
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div style={{ marginTop: 10, fontSize: 12, color: "#4c5b74" }}>
-          Click any loan row to view details and uploaded documents.
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <Button variant="primary" size="sm" onClick={() => navigate("/user/apply")}>
+            + Apply New
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/user/analytics")}>
+            Analytics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
       </div>
-    </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
+        {[
+          { label: "Total", value: loans.length, accent: "#1a5fc4" },
+          { label: "Draft", value: bucketCounts.Draft, accent: "#6b7280" },
+          { label: "Pending", value: bucketCounts.Pending, accent: "#d97706" },
+          { label: "Accepted", value: bucketCounts.Accepted, accent: "#16a34a" },
+          { label: "Rejected", value: bucketCounts.Rejected, accent: "#dc2626" },
+        ].map((s) => (
+          <Card key={s.label}>
+            <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>{s.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: s.accent, marginTop: 4 }}>{s.value}</div>
+          </Card>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 999,
+              border: "2px solid",
+              borderColor: tab === t.key ? "#1a5fc4" : "transparent",
+              background: tab === t.key ? "rgba(26,95,196,0.08)" : "rgba(255,255,255,0.7)",
+              color: tab === t.key ? "#1a5fc4" : "#5a6578",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <Loader text="Loading your loans..." />}
+      {message && !loading && (
+        <Card style={{ marginBottom: 16, background: "rgba(26,95,196,0.06)", border: "1px solid rgba(26,95,196,0.35)", color: "#1a5fc4", fontWeight: 700 }}>
+          {message}
+        </Card>
+      )}
+      {!loading && !message && loans.length === 0 && (
+        <EmptyState
+          icon="📋"
+          title="No loan applications yet"
+          description="Start your first loan application to track it here."
+          action={
+            <Button variant="primary" onClick={() => navigate("/user/apply")}>
+              Apply for a Loan
+            </Button>
+          }
+        />
+      )}
+      {!loading && !message && filteredLoans.length === 0 && loans.length > 0 && (
+        <div style={{ marginTop: 30, textAlign: "center", color: "#5a6578" }}>
+          No loans in the "{tab}" category.
+        </div>
+      )}
+
+      {!loading && !message && filteredLoans.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+          {filteredLoans.map((loan) => {
+            const st = getStatusStyle(loan.status);
+            const tone = st.bg === "#d4edda" ? "success" : st.bg === "#f8d7da" ? "danger" : "warning";
+            const isExpanded = expandedCard === loan.loan_id;
+
+            return (
+              <Card
+                key={loan.loan_id}
+                style={{ cursor: "pointer", transition: "transform 0.2s" }}
+                onClick={() => setExpandedCard(isExpanded ? null : loan.loan_id)}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: "#1a5fc4" }}>
+                    Loan #{displayIdMap.get(loan.loan_id)}
+                  </span>
+                  <Badge tone={tone}>{loan.status}</Badge>
+                </div>
+
+                <div style={{ fontSize: 13, color: "#2d3748", lineHeight: 1.7 }}>
+                  <div><strong>Amount:</strong> Rs {Number(loan.loan_amount).toLocaleString()}</div>
+                  <div><strong>Tenure:</strong> {loan.tenure} months</div>
+                  {isExpanded && (
+                    <>
+                      <div><strong>Interest:</strong> {loan.interest_rate}%</div>
+                      <div><strong>EMI:</strong> Rs {Number(loan.emi).toFixed(2)}</div>
+                      <div><strong>Applied:</strong> {loan.applied_date ? new Date(loan.applied_date).toLocaleDateString() : "N/A"}</div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/user/loan/${loan.loan_id}`);
+                    }}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ marginTop: 18, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 12, color: "#5a6578" }}>
+          {loans.length} total loan(s) for {userEmail}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/documentation")}>
+          Documentation
+        </Button>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,0 +1,93 @@
+.ds-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ds-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.ds-button-sm {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.ds-button-md {
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.ds-button-lg {
+  padding: 16px 32px;
+  font-size: 18px;
+}
+
+.ds-button-full {
+  width: 100%;
+}
+
+/* Variants */
+.ds-button-primary {
+  background: var(--primary-color, #2563eb);
+  color: white;
+}
+.ds-button-primary:hover:not(:disabled) {
+  background: var(--primary-hover, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.ds-button-secondary {
+  background: white;
+  color: var(--text-color, #1e293b);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+.ds-button-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.ds-button-danger {
+  background: #ef4444;
+  color: white;
+}
+.ds-button-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.ds-button-ghost {
+  background: transparent;
+  color: var(--primary-color, #2563eb);
+}
+.ds-button-ghost:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+/* Loading Spinner */
+.ds-button-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+.ds-button-secondary .ds-button-spinner {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color, #2563eb);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

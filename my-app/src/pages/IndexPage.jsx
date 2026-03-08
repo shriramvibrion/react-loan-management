@@ -1,6 +1,9 @@
+import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 
-export default function IndexPage({ navigate }) {
+export default function IndexPage() {
+  const navigate = useNavigate();
+
   return (
     <PageBg>
       <div className="index-card">
@@ -24,10 +27,10 @@ export default function IndexPage({ navigate }) {
         <div className="divider" />
 
         <div className="index-buttons">
-          <button className="index-btn-user" onClick={() => navigate("user-login")}>
+          <button className="index-btn-user" onClick={() => navigate("/user/login")}>
             User
           </button>
-          <button className="index-btn-admin" onClick={() => navigate("admin-login")}>
+          <button className="index-btn-admin" onClick={() => navigate("/admin/login")}>
             Admin
           </button>
         </div>

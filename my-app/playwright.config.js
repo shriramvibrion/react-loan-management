@@ -1,26 +1,24 @@
-const { defineConfig, devices } = require("@playwright/test");
+const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
-  testDir: "./e2e",
-  timeout: 30_000,
+  testDir: './tests',
   fullyParallel: true,
   retries: 1,
-  reporter: "list",
+  workers: 2,
+  reporter: 'html',
   use: {
-    baseURL: "http://127.0.0.1:3000",
-    trace: "on-first-retry",
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: {
-    command: "npm start",
-    url: "http://127.0.0.1:3000",
+    command: 'npm run start',
+    url: 'http://localhost:3000',
     reuseExistingServer: true,
-    timeout: 120_000,
   },
 });
-

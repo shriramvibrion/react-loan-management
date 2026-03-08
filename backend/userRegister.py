@@ -18,6 +18,9 @@ def register_user():
     # Basic validation
     if not name or not email or not password or not phone or not city:
         return jsonify({"error": "Name, email, password, phone, and city are required."}), 400
+        
+    if len(name) > 100 or len(email) > 100 or len(password) > 72 or len(phone) > 20 or len(city) > 50:
+        return jsonify({"error": "Fields exceed maximum allowed lengths (password max 72 chars)."}), 400
 
     conn = None
     cursor = None

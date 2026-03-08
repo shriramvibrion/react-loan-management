@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+
 const coreSections = [
   {
     title: "Loan Basics",
@@ -62,7 +65,15 @@ const disclaimers = [
   "Final sanction letter terms always take precedence.",
 ];
 
-export default function Documentation({ navigate, onLogout }) {
+export default function Documentation() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   return (
     <div
       style={{
@@ -140,13 +151,7 @@ export default function Documentation({ navigate, onLogout }) {
                 color: "#fff",
                 border: "1px solid rgba(255,255,255,0.35)",
               }}
-              onClick={() => {
-                if (typeof onLogout === "function") {
-                  onLogout();
-                } else {
-                  navigate("index");
-                }
-              }}
+              onClick={handleLogout}
             >
               Logout
             </button>
@@ -257,7 +262,7 @@ export default function Documentation({ navigate, onLogout }) {
                     color: "#1a5fc4",
                     boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
                   }}
-                  onClick={() => navigate("user-dashboard")}
+                  onClick={() => navigate("/user/dashboard")}
                 >
                   My Loans
                 </button>
@@ -271,7 +276,7 @@ export default function Documentation({ navigate, onLogout }) {
                     letterSpacing: 0.9,
                     boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
                   }}
-                  onClick={() => navigate("apply-loan")}
+                  onClick={() => navigate("/user/apply")}
                 >
                   Apply Loan
                 </button>
@@ -432,7 +437,7 @@ export default function Documentation({ navigate, onLogout }) {
           <button
             className="home-btn-blue"
             style={{ width: "auto", padding: "9px 16px" }}
-            onClick={() => navigate("index")}
+            onClick={() => navigate("/")}
           >
             Back to Home
           </button>

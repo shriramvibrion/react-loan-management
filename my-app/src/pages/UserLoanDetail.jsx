@@ -1,26 +1,53 @@
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "../api";
-import {
-  fetchUserLoanDetail,
-  updateUserLoanContact,
-} from "../loanService";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { useToast } from "../context/ToastContext";
+import { fetchUserLoanDetail, updateUserLoanContact, API_BASE_URL } from "../services/loanService";
+import Loader from "../components/ui/Loader";
 
-export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) {
+function Section({ title, children }) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 14,
+        padding: 18,
+        marginBottom: 16,
+        border: "1px solid rgba(0,0,0,0.06)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}
+    >
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#1a5fc4", marginBottom: 12 }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14 }}>
+      <span style={{ color: "#5a6578", minWidth: 140 }}>{label}:</span>
+      <span style={{ color: "#2d3748" }}>{value ?? "-"}</span>
+    </div>
+  );
+}
+
+export default function UserLoanDetail() {
+  const navigate = useNavigate();
+  const { loanId } = useParams();
+  const { userEmail } = useAuth();
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [editMode, setEditMode] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [contactForm, setContactForm] = useState({ contact_email: "", primary_mobile: "", alternate_mobile: "" });
   const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState({
-    contact_email: "",
-    primary_mobile: "",
-    alternate_mobile: "",
-  });
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-
-    if (!loanId) {
+    if (!loanId || !userEmail) {
       setLoading(false);
       setMessage("No loan selected.");
       return;
@@ -29,299 +56,255 @@ export default function UserLoanDetail({ navigate, userEmail, loanId, onBack }) 
     const load = async () => {
       try {
         setLoading(true);
-        setMessage("");
         const json = await fetchUserLoanDetail(loanId, userEmail);
         setData(json);
-        setEditForm({
-          contact_email: json?.applicant?.contact_email || "",
-          primary_mobile: json?.applicant?.primary_mobile || "",
-          alternate_mobile: json?.applicant?.alternate_mobile || "",
-        });
+        if (json?.applicant) {
+          setContactForm({
+            contact_email: json.applicant.contact_email || "",
+            primary_mobile: json.applicant.primary_mobile || "",
+            alternate_mobile: json.applicant.alternate_mobile || "",
+          });
+        }
       } catch (err) {
         setMessage(err.message || "Failed to load loan details.");
       } finally {
         setLoading(false);
       }
     };
-
     load();
   }, [loanId, userEmail]);
 
-  const handleEditChange = (field, value) => {
-    setEditForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async () => {
-    if (!editForm.contact_email.trim() || !editForm.primary_mobile.trim()) {
-      setMessage("Contact email and primary mobile are required.");
-      return;
-    }
-
+  const handleSaveContact = async () => {
+    if (!loanId || saving) return;
     try {
       setSaving(true);
-      setMessage("");
-
-      const json = await updateUserLoanContact(loanId, userEmail, editForm);
-
-      setMessage(json.message || "Updated successfully.");
+      const json = await updateUserLoanContact(loanId, userEmail, contactForm);
+      toast.success(json.message || "Contact information updated.");
+      setEditingContact(false);
       setData((prev) =>
         prev
           ? {
               ...prev,
               applicant: {
                 ...prev.applicant,
-                contact_email: editForm.contact_email,
-                primary_mobile: editForm.primary_mobile,
-                alternate_mobile: editForm.alternate_mobile,
+                contact_email: contactForm.contact_email,
+                primary_mobile: contactForm.primary_mobile,
+                alternate_mobile: contactForm.alternate_mobile,
               },
             }
-          : prev
+          : null
       );
-      setEditMode(false);
     } catch (err) {
-      setMessage(err.message || "Failed to update.");
+      toast.error(err.message || "Failed to update contact info.");
     } finally {
       setSaving(false);
     }
   };
 
-  const { loan, applicant, documents } = data || {};
-
-  const InfoRow = ({ label, value }) => (
-    <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
-      <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>{label}:</div>
-      <div style={{ color: "#2d3748" }}>{value ?? "-"}</div>
-    </div>
-  );
-
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100vw",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background:
-            "linear-gradient(135deg, #e3ecff 0%, #f5f8ff 40%, #ffffff 100%)",
-        }}
-      >
-        <div className="link-row">Loading loan details...</div>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)" }}>
+        <Loader text="Loading loan details..." size={36} />
       </div>
     );
   }
 
-  if (!data) {
+  if (message && !data) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100vw",
-          padding: 24,
-          boxSizing: "border-box",
-          background:
-            "linear-gradient(135deg, #e3ecff 0%, #f5f8ff 40%, #ffffff 100%)",
-        }}
-      >
-        <div className="link-row" style={{ color: "#e06d0a", marginBottom: 12 }}>{message || "Unable to load loan."}</div>
-        <button className="home-btn-blue" style={{ width: "auto", padding: "10px 16px" }} onClick={onBack}>
-          Back to My Loans
-        </button>
+      <div style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)", color: "#0f172a" }}>
+        <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(255,255,255,0.55)", borderRadius: 18, padding: 18, boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)", backdropFilter: "blur(16px)" }}>
+          <div style={{ color: "#1a5fc4", marginBottom: 16, fontWeight: 700 }}>{message}</div>
+          <button className="home-btn-blue" onClick={() => navigate("/user/dashboard")}>Back</button>
+        </div>
       </div>
     );
   }
+
+  const { loan, applicant, documents } = data || {};
+  const status = (loan?.status || "").toLowerCase();
+  const docViewUrl = (docId) => `${API_BASE_URL}/api/user/document/${docId}`;
 
   return (
     <div
       style={{
         height: "100vh",
         width: "100vw",
-        padding: "18px 22px 24px",
+        padding: "22px 18px",
         boxSizing: "border-box",
-        background:
-          "linear-gradient(135deg, #e3ecff 0%, #f5f8ff 40%, #ffffff 100%)",
+        background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)",
+        overflowX: "hidden",
         overflowY: "auto",
+        color: "#0f172a",
       }}
     >
       <div
         style={{
-          maxWidth: 1100,
+          width: "min(1120px, 96vw)",
           margin: "0 auto",
-          background: "rgba(255,255,255,0.92)",
-          borderRadius: 16,
+          background: "rgba(255,255,255,0.55)",
+          border: "1px solid rgba(255,255,255,0.65)",
+          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
+          borderRadius: 18,
           padding: 18,
-          boxShadow: "0 8px 28px rgba(15,23,42,0.10)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 22, fontWeight: 800, color: "#1a5fc4" }}>
-              Loan #{loan?.loan_id} - Full Details
+            <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 22, fontWeight: 900, color: "#1a5fc4" }}>
+              Loan #{loan?.loan_id} — Details
             </div>
-            <div style={{ fontSize: 13, color: "#555", marginTop: 2 }}>
-              Read-only view with editable contact details.
+            <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+              View your application status, details, and documents
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button className="home-btn-blue" style={{ width: "auto", padding: "10px 14px" }} onClick={onBack}>
-              Back to My Loans
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span
+              style={{
+                padding: "6px 14px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 800,
+                background: status === "pending" ? "#fff3cd" : status === "rejected" ? "#f8d7da" : "#d4edda",
+                color: status === "pending" ? "#856404" : status === "rejected" ? "#721c24" : "#155724",
+              }}
+            >
+              {loan?.status}
+            </span>
+            <button
+              className="home-btn-blue"
+              style={{ width: "auto", padding: "10px 18px", background: "rgba(255,255,255,0.9)", border: "1px solid rgba(26,95,196,0.5)", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+              onClick={() => navigate("/user/dashboard")}
+            >
+              Back to Dashboard
             </button>
-            {!editMode ? (
-              <button
-                className="btn-blue"
-                style={{ width: "auto", marginTop: 0, padding: "10px 14px", fontSize: 13 }}
-                onClick={() => setEditMode(true)}
-              >
-                Edit Contact
-              </button>
-            ) : (
-              <>
-                <button
-                  className="btn-blue"
-                  style={{ width: "auto", marginTop: 0, padding: "10px 14px", fontSize: 13 }}
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-                <button
-                  className="home-btn-blue"
-                  style={{ width: "auto", padding: "10px 14px" }}
-                  onClick={() => {
-                    setEditMode(false);
-                    setEditForm({
-                      contact_email: applicant?.contact_email || "",
-                      primary_mobile: applicant?.primary_mobile || "",
-                      alternate_mobile: applicant?.alternate_mobile || "",
-                    });
-                    setMessage("");
-                  }}
-                >
-                  Cancel
-                </button>
-              </>
-            )}
           </div>
         </div>
 
         {message && (
-          <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(43,125,233,0.10)", color: "#1a5fc4", fontWeight: 700 }}>
+          <div style={{ padding: 12, borderRadius: 10, background: "rgba(26,95,196,0.08)", color: "#1a5fc4", marginBottom: 16, fontWeight: 700 }}>
             {message}
           </div>
         )}
 
-        <section style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid rgba(0,0,0,0.06)", marginBottom: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Uploaded Files</div>
+        <Section title="Loan Overview">
+          <InfoRow label="Loan Amount" value={`Rs ${Number(loan?.loan_amount || 0).toLocaleString()}`} />
+          <InfoRow label="Tenure" value={`${loan?.tenure} months`} />
+          <InfoRow label="Interest Rate" value={`${loan?.interest_rate}%`} />
+          <InfoRow label="EMI" value={`Rs ${Number(loan?.emi || 0).toFixed(2)}`} />
+          <InfoRow label="Applied Date" value={loan?.applied_date ? new Date(loan.applied_date).toLocaleString() : null} />
+        </Section>
+
+        {applicant && (
+          <Section title="Applicant Details">
+            <InfoRow label="Full Name" value={applicant.full_name} />
+            <InfoRow label="Date of Birth" value={applicant.dob} />
+            <InfoRow label="Address" value={[applicant.address_line1, applicant.address_line2, applicant.city, applicant.state, applicant.postal_code].filter(Boolean).join(", ")} />
+            <InfoRow label="PAN Number" value={applicant.pan_number} />
+            <InfoRow label="Aadhaar Number" value={applicant.aadhaar_number} />
+            <InfoRow label="Monthly Income" value={applicant.monthly_income != null ? `Rs ${Number(applicant.monthly_income).toLocaleString()}` : null} />
+            <InfoRow label="Employer" value={applicant.employer_name} />
+            <InfoRow label="Employment Type" value={applicant.employment_type} />
+            <InfoRow label="Loan Purpose" value={applicant.loan_purpose} />
+            {applicant.notes && <InfoRow label="Notes" value={applicant.notes} />}
+          </Section>
+        )}
+
+        <Section title="Contact Information">
+          {editingContact ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input
+                className="input-field"
+                placeholder="Contact Email"
+                value={contactForm.contact_email}
+                onChange={(e) => setContactForm({ ...contactForm, contact_email: e.target.value })}
+              />
+              <input
+                className="input-field"
+                placeholder="Primary Mobile"
+                value={contactForm.primary_mobile}
+                onChange={(e) => setContactForm({ ...contactForm, primary_mobile: e.target.value })}
+              />
+              <input
+                className="input-field"
+                placeholder="Alternate Mobile"
+                value={contactForm.alternate_mobile}
+                onChange={(e) => setContactForm({ ...contactForm, alternate_mobile: e.target.value })}
+              />
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn-blue" style={{ width: "auto", padding: "10px 20px", marginTop: 0 }} onClick={handleSaveContact} disabled={saving}>
+                  {saving ? "Saving..." : "Save"}
+                </button>
+                <button className="home-btn-blue" style={{ width: "auto", padding: "10px 20px" }} onClick={() => setEditingContact(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <InfoRow label="Contact Email" value={applicant?.contact_email} />
+              <InfoRow label="Primary Mobile" value={applicant?.primary_mobile} />
+              <InfoRow label="Alternate Mobile" value={applicant?.alternate_mobile} />
+              <button
+                className="home-btn-blue"
+                style={{ width: "auto", padding: "8px 16px", marginTop: 8 }}
+                onClick={() => setEditingContact(true)}
+              >
+                Edit Contact Info
+              </button>
+            </>
+          )}
+        </Section>
+
+        <Section title="Uploaded Documents">
           {documents?.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {documents.map((doc) => (
                 <div
                   key={doc.document_id}
                   style={{
-                    background: "#f8fbff",
-                    border: "1px solid #d9e7ff",
-                    borderRadius: 10,
-                    padding: "10px 12px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    padding: "12px 14px",
+                    background: "rgba(255,255,255,0.75)",
+                    borderRadius: 10,
+                    flexWrap: "wrap",
                     gap: 10,
+                    border: "1px solid rgba(0,0,0,0.05)",
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#2d3748" }}>{doc.document_type}</div>
-                    <div style={{ fontSize: 12, color: "#667085" }}>{doc.original_filename}</div>
+                    <div style={{ fontWeight: 800, color: "#2d3748" }}>{doc.document_type}</div>
+                    <div style={{ fontSize: 12, color: "#5a6578" }}>{doc.original_filename}</div>
                   </div>
                   <a
-                    href={`${API_BASE_URL}/api/admin/document/${doc.document_id}`}
+                    href={docViewUrl(doc.document_id)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: 12, fontWeight: 800, color: "#1a5fc4", textDecoration: "none" }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      background: "#1a5fc4",
+                      color: "#fff",
+                      textDecoration: "none",
+                      fontWeight: 800,
+                      fontSize: 13,
+                      boxShadow: "0 8px 18px rgba(26,95,196,0.22)",
+                    }}
                   >
-                    View
+                    View / Download
                   </a>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ color: "#667085", fontSize: 13 }}>No files uploaded.</div>
+            <div style={{ color: "#5a6578" }}>No documents uploaded.</div>
           )}
-        </section>
-
-        <section style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid rgba(0,0,0,0.06)", marginBottom: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Loan Information</div>
-          <InfoRow label="Loan Amount" value={`Rs ${Number(loan?.loan_amount || 0).toLocaleString()}`} />
-          <InfoRow label="Tenure" value={`${loan?.tenure} months`} />
-          <InfoRow label="Interest Rate" value={`${loan?.interest_rate}%`} />
-          <InfoRow label="EMI" value={`Rs ${Number(loan?.emi || 0).toFixed(2)}`} />
-          <InfoRow label="Status" value={loan?.status} />
-          <InfoRow label="Applied Date" value={loan?.applied_date ? new Date(loan.applied_date).toLocaleString() : "-"} />
-        </section>
-
-        <section style={{ background: "#fff", borderRadius: 12, padding: 14, border: "1px solid rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Applicant Details</div>
-          <InfoRow label="Full Name" value={applicant?.full_name} />
-          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Contact Email:</div>
-            {editMode ? (
-              <input
-                className="input-field"
-                type="email"
-                value={editForm.contact_email}
-                onChange={(e) => handleEditChange("contact_email", e.target.value)}
-                style={{ maxWidth: 360 }}
-              />
-            ) : (
-              <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.contact_email || "—"}</div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Primary Mobile:</div>
-            {editMode ? (
-              <input
-                className="input-field"
-                value={editForm.primary_mobile}
-                onChange={(e) => handleEditChange("primary_mobile", e.target.value)}
-                style={{ maxWidth: 260 }}
-              />
-            ) : (
-              <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.primary_mobile || "—"}</div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14, alignItems: "center" }}>
-            <div style={{ minWidth: 160, color: "#5a6578", fontWeight: 700 }}>Alternate Mobile:</div>
-            {editMode ? (
-              <input
-                className="input-field"
-                value={editForm.alternate_mobile}
-                onChange={(e) => handleEditChange("alternate_mobile", e.target.value)}
-                style={{ maxWidth: 260 }}
-              />
-            ) : (
-              <div style={{ color: "#2d3748", fontSize: 14 }}>{applicant?.alternate_mobile || "—"}</div>
-            )}
-          </div>
-          <InfoRow label="Date of Birth" value={applicant?.dob} />
-          <InfoRow label="Address Line 1" value={applicant?.address_line1} />
-          <InfoRow label="Address Line 2" value={applicant?.address_line2} />
-          <InfoRow label="City" value={applicant?.city} />
-          <InfoRow label="State" value={applicant?.state} />
-          <InfoRow label="Postal Code" value={applicant?.postal_code} />
-          <InfoRow label="PAN Number" value={applicant?.pan_number} />
-          <InfoRow label="Aadhaar Number" value={applicant?.aadhaar_number} />
-          <InfoRow label="Monthly Income" value={applicant?.monthly_income != null ? `Rs ${Number(applicant.monthly_income).toLocaleString()}` : "-"} />
-          <InfoRow label="Employer" value={applicant?.employer_name} />
-          <InfoRow label="Employment Type" value={applicant?.employment_type} />
-          <InfoRow label="Loan Purpose" value={applicant?.loan_purpose} />
-          <InfoRow label="Notes" value={applicant?.notes} />
-        </section>
+        </Section>
       </div>
     </div>
   );
 }
-
-
