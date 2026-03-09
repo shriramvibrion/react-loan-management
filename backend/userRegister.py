@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 import bcrypt
+import logging
 import re
 import mysql.connector
 from database import get_connection
 
 user_register_bp = Blueprint("user_register", __name__)
+logger = logging.getLogger(__name__)
 
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 PASSWORD_MIN_LEN = 8
@@ -61,7 +63,8 @@ def register_user():
 
         return jsonify({"message": "User registered successfully."}), 201
 
-    except mysql.connector.Error:
+    except mysql.connector.Error as e:
+        logger.exception("Database error during user registration: %s", e)
         return jsonify({"error": "Database error occurred."}), 500
 
     finally:
