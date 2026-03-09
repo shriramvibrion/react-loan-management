@@ -9,7 +9,6 @@ import { monthDiff } from "../utils/loanUtils";
 import Loader from "../components/ui/Loader";
 import Section from "../components/ui/Section";
 import InfoRow from "../components/ui/InfoRow";
-import ProgressBar from "../components/ui/ProgressBar";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { useToast } from "../context/ToastContext";
