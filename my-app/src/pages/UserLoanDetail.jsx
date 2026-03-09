@@ -78,7 +78,7 @@ export default function UserLoanDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)" }}>
+      <div className="page-bg-image" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)" }}>
         <Loader text="Loading loan details..." size={36} />
       </div>
     );
@@ -86,7 +86,7 @@ export default function UserLoanDetail() {
 
   if (message && !data) {
     return (
-      <div style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)", color: "#0f172a" }}>
+      <div className="page-bg-image" style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)", color: "#0f172a" }}>
         <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(255,255,255,0.92)", borderRadius: 18, padding: 18, boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)", backdropFilter: "blur(16px)" }}>
           <div style={{ color: "#4338ca", marginBottom: 16, fontWeight: 700 }}>{message}</div>
           <button className="home-btn-blue" onClick={() => navigate("/user/dashboard")}>Back</button>
@@ -101,6 +101,7 @@ export default function UserLoanDetail() {
 
   return (
     <div
+      className="page-bg-image"
       style={{
         height: "100vh",
         width: "100vw",

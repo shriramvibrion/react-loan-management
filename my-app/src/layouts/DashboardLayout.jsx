@@ -10,6 +10,7 @@ export default function DashboardLayout({ children, variant = "blue" }) {
 
   return (
     <div
+      className="page-bg-image"
       style={{
         height: "100vh",
         width: "100vw",

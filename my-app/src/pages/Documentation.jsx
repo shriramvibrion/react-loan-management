@@ -76,6 +76,7 @@ export default function Documentation() {
 
   return (
     <div
+      className="page-bg-image"
       style={{
         height: "100vh",
         width: "100vw",

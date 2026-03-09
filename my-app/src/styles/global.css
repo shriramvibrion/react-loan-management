@@ -222,6 +222,31 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PAGE BACKGROUND IMAGE — Subtle layer for all app pages
+   ═══════════════════════════════════════════════════════════ */
+.page-bg-image {
+  position: relative;
+}
+
+.page-bg-image::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: var(--page-bg-url);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-bg-image > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════
    AUTH CARD — Glassmorphism
    ═══════════════════════════════════════════════════════════ */
 .card {

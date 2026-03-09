@@ -137,6 +137,7 @@ export default function ApplyLoan() {
 
   return (
     <div
+      className="page-bg-image"
       style={{
         minHeight: "100vh",
         width: "100vw",

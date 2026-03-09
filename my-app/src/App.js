@@ -60,6 +60,7 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <BrowserRouter>
+            <div style={{ "--page-bg-url": `url(${bgImage})` }}>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public routes */}
@@ -133,6 +134,7 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
+            </div>
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>

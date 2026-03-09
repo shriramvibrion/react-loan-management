@@ -73,6 +73,7 @@ export default function AdminLoanDetail() {
   if (loading) {
     return (
       <div
+        className="page-bg-image"
         style={{
           minHeight: "100vh",
           padding: 22,
@@ -91,6 +92,7 @@ export default function AdminLoanDetail() {
   if (message && !data) {
     return (
       <div
+        className="page-bg-image"
         style={{
           minHeight: "100vh",
           padding: 22,
@@ -142,6 +144,7 @@ export default function AdminLoanDetail() {
 
   return (
     <div
+      className="page-bg-image"
       style={{
         height: "100vh",
         width: "100vw",
