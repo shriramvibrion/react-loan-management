@@ -34,10 +34,15 @@ const INITIAL_FORM = {
   notes: "",
 };
 
-function loadDraft() {
+function loadDraft(email) {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Only restore if draft belongs to the same user
+    if (parsed._draftOwner && parsed._draftOwner !== email) return null;
+    const { _draftOwner, ...formData } = parsed;
+    return formData;
   } catch {
     return null;
   }
@@ -47,17 +52,17 @@ function loadDraft() {
  * Custom hook encapsulating all loan application form logic:
  * form state, file state, auto-calculations, draft save/load, and validation.
  */
-export default function useLoanForm() {
-  const [form, setForm] = useState(() => loadDraft() || INITIAL_FORM);
+export default function useLoanForm(userEmail) {
+  const [form, setForm] = useState(() => loadDraft(userEmail) || INITIAL_FORM);
   const [files, setFiles] = useState({});
 
-  // Auto-save draft to localStorage
+  // Auto-save draft to localStorage (tagged with owner email)
   useEffect(() => {
     try {
-      const serialized = { ...form };
+      const serialized = { ...form, _draftOwner: userEmail || "" };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(serialized));
     } catch { /* ignore */ }
-  }, [form]);
+  }, [form, userEmail]);
 
   const updateField = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -200,8 +205,7 @@ export default function useLoanForm() {
 
       // Core named document uploads
       const coreFileKeys = [
-        "pan_file", "aadhaar_file", "income_tax_certificate",
-        "tax_document", "employment_proof",
+        "pan_file", "aadhaar_file",
       ];
       for (const key of coreFileKeys) {
         if (files[key]) {

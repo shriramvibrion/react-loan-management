@@ -41,13 +41,6 @@ export default function AdminDashboard() {
     navigate("/");
   }, [logout, navigate]);
 
-  const handleLoanClick = useCallback(
-    (loanId) => {
-      navigate(`/admin/loan/${loanId}`);
-    },
-    [navigate]
-  );
-
   const normalizedLoans = useMemo(
     () =>
       loans.map((l) => ({
@@ -67,6 +60,13 @@ export default function AdminDashboard() {
     });
     return new Map(loansByCreationOrder.map((loan, index) => [loan.loan_id, index + 1]));
   }, [normalizedLoans]);
+
+  const handleLoanClick = useCallback(
+    (loanId) => {
+      navigate(`/admin/loan/${loanId}`, { state: { displayId: displayIdMap.get(loanId) } });
+    },
+    [navigate, displayIdMap]
+  );
 
   const filteredLoans = useMemo(
     () =>
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 18,
+          marginBottom: 24,
           flexWrap: "wrap",
           gap: 12,
         }}
@@ -122,15 +122,16 @@ export default function AdminDashboard() {
         <div>
           <div
             style={{
-              fontFamily: "Montserrat, sans-serif",
-              fontSize: 24,
-              fontWeight: 900,
-              color: "#FF8A33",
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: 22,
+              fontWeight: 800,
+              color: "#ea580c",
+              letterSpacing: "-0.3px",
             }}
           >
             Loan Applications
           </div>
-          <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
             Review, verify documents, and approve or reject requests.
           </div>
         </div>
@@ -155,10 +156,10 @@ export default function AdminDashboard() {
             style={{
               flex: 1,
               minWidth: 220,
-              background: "rgba(255,255,255,0.9)",
-              color: "#2d3748",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-              border: "1px solid rgba(255,138,51,0.35)",
+              background: "rgba(255,255,255,0.95)",
+              color: "#1e293b",
+              boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+              border: "1.5px solid #fed7aa",
             }}
           />
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -168,10 +169,10 @@ export default function AdminDashboard() {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{
                 width: 170,
-                background: "rgba(255,255,255,0.9)",
-                color: "#2d3748",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                border: "1px solid rgba(255,138,51,0.35)",
+                background: "rgba(255,255,255,0.95)",
+                color: "#1e293b",
+                boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+                border: "1.5px solid #fed7aa",
               }}
             >
               <option value="all">All Status</option>
@@ -179,13 +180,18 @@ export default function AdminDashboard() {
               <option value="pending">Pending</option>
               <option value="rejected">Rejected</option>
             </select>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 4 }}>
               <Button
                 variant={viewMode === "container" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => setViewMode("container")}
                 title="Container View"
-                style={{ borderRadius: 8, padding: "8px 12px", fontSize: 14 }}
+                style={{
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 14,
+                  ...(viewMode === "container" ? { background: "linear-gradient(135deg, #f97316, #ea580c)" } : {}),
+                }}
               >
                 ⊞
               </Button>
@@ -194,12 +200,17 @@ export default function AdminDashboard() {
                 size="sm"
                 onClick={() => setViewMode("list")}
                 title="List View"
-                style={{ borderRadius: 8, padding: "8px 12px", fontSize: 14 }}
+                style={{
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 14,
+                  ...(viewMode === "list" ? { background: "linear-gradient(135deg, #f97316, #ea580c)" } : {}),
+                }}
               >
                 ☰
               </Button>
             </div>
-            <Button variant="secondary" size="sm" onClick={handleLogout}>
+            <Button variant="secondary" size="sm" onClick={handleLogout} style={{ borderColor: "#fed7aa", color: "#ea580c" }}>
               Logout
             </Button>
           </div>
@@ -212,25 +223,26 @@ export default function AdminDashboard() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
           gap: 12,
-          marginBottom: 16,
+          marginBottom: 20,
         }}
       >
         {[
-          { label: "Total", value: normalizedLoans.length, accent: "#FF8A33" },
-          { label: "Pending", value: countPending, accent: "#FF8A33" },
-          { label: "Approved", value: countApproved, accent: "#16a34a" },
-          { label: "Rejected", value: countRejected, accent: "#dc2626" },
+          { label: "Total", value: normalizedLoans.length, accent: "#f97316" },
+          { label: "Pending", value: countPending, accent: "#f59e0b" },
+          { label: "Approved", value: countApproved, accent: "#10b981" },
+          { label: "Rejected", value: countRejected, accent: "#f43f5e" },
         ].map((s) => (
-          <Card key={s.label}>
-            <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>
+          <Card key={s.label} style={{ borderLeft: `3px solid ${s.accent}`, background: "linear-gradient(135deg, rgba(255,255,255,0.97), rgba(255,251,235,0.5))" }}>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
               {s.label}
             </div>
             <div
               style={{
-                fontSize: 22,
-                fontWeight: 900,
+                fontSize: 24,
+                fontWeight: 800,
                 color: s.accent,
-                marginTop: 4,
+                marginTop: 6,
+                fontFamily: "'Montserrat', sans-serif",
               }}
             >
               {s.value}
@@ -245,10 +257,10 @@ export default function AdminDashboard() {
         <Card
           style={{
             marginBottom: 16,
-            background: "rgba(255,138,51,0.06)",
-            border: "1px solid rgba(255,138,51,0.35)",
-            color: "#FF8A33",
-            fontWeight: 700,
+            background: "linear-gradient(135deg, #fff7ed, #ffedd5)",
+            border: "1px solid #fed7aa",
+            color: "#ea580c",
+            fontWeight: 600,
           }}
         >
           {message}
@@ -267,7 +279,7 @@ export default function AdminDashboard() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
             gap: 16,
           }}
         >
@@ -284,16 +296,18 @@ export default function AdminDashboard() {
                 key={loan.loan_id}
                 style={{
                   cursor: "pointer",
-                  transition: "transform 0.2s, box-shadow 0.2s",
+                  transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                  borderTop: "2px solid",
+                  borderImage: "linear-gradient(135deg, #f97316, #ea580c) 1",
                 }}
                 onClick={() => handleLoanClick(loan.loan_id)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-3px)";
-                  e.currentTarget.style.boxShadow = "0 10px 26px rgba(0,0,0,0.12)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(15,23,42,0.10)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(15,23,42,0.08)";
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(15,23,42,0.06)";
                 }}
               >
                 <div
@@ -304,22 +318,23 @@ export default function AdminDashboard() {
                     marginBottom: 12,
                   }}
                 >
-                  <span style={{ fontSize: 18, fontWeight: 900, color: "#FF8A33" }}>
+                  <span style={{ fontSize: 17, fontWeight: 800, color: "#ea580c", fontFamily: "'Montserrat', sans-serif" }}>
                     Loan #{displayIdMap.get(loan.loan_id)}
                   </span>
                   <Badge tone={tone}>{loan.status}</Badge>
                 </div>
 
-                <div style={{ fontSize: 13, color: "#2d3748", lineHeight: 1.7 }}>
-                  <div><strong>User ID:</strong> {loan.user_id}</div>
-                  <div><strong>Name:</strong> {loan.user_name || "N/A"}</div>
+                <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.8 }}>
+                  <div><span style={{ color: "#64748b" }}>User ID:</span> <strong>{loan.user_id}</strong></div>
+                  <div><span style={{ color: "#64748b" }}>Name:</span> <strong>{loan.user_name || "N/A"}</strong></div>
                   <div style={{ wordBreak: "break-word" }}>
-                    <strong>Email:</strong> {loan.user_email}
+                    <span style={{ color: "#64748b" }}>Email:</span> <strong>{loan.user_email}</strong>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12, fontSize: 12, color: "#FF8A33", fontWeight: 700 }}>
-                  Click to view full details →
+                <div style={{ marginTop: 12, fontSize: 12, color: "#f97316", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                  View full details
+                  <span style={{ fontSize: 14 }}>→</span>
                 </div>
               </Card>
             );
@@ -328,19 +343,19 @@ export default function AdminDashboard() {
       )}
 
       {!loading && !message && filteredLoans.length > 0 && viewMode === "list" && (
-        <div style={{ background: "rgba(255,255,255,0.92)", borderRadius: 14, overflow: "hidden", border: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(15,23,42,0.06)", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,138,51,0.1)", borderBottom: "2px solid rgba(255,138,51,0.3)" }}>
-                <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Loan No.</th>
-                <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>User ID</th>
-                <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Name</th>
-                <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Email</th>
-                <th style={{ padding: "12px", textAlign: "left", fontSize: 12, fontWeight: 800, color: "#2d3748" }}>Status</th>
+              <tr style={{ background: "linear-gradient(135deg, #fff7ed, #ffedd5)", borderBottom: "2px solid #fed7aa" }}>
+                <th style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Loan No.</th>
+                <th style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>User ID</th>
+                <th style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Name</th>
+                <th style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email</th>
+                <th style={{ padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLoans.map((loan) => {
+              {filteredLoans.map((loan, idx) => {
                 const st = getStatusStyle(loan.status);
                 return (
                   <tr
@@ -348,27 +363,28 @@ export default function AdminDashboard() {
                     onClick={() => handleLoanClick(loan.loan_id)}
                     style={{
                       cursor: "pointer",
-                      borderBottom: "1px solid rgba(0,0,0,0.05)",
-                      transition: "background 0.2s",
+                      borderBottom: "1px solid rgba(15,23,42,0.04)",
+                      transition: "all 0.15s ease",
+                      background: idx % 2 === 0 ? "transparent" : "rgba(248,250,252,0.5)",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "rgba(255,138,51,0.05)";
+                      e.currentTarget.style.background = "rgba(255,247,237,0.6)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "rgba(248,250,252,0.5)";
                     }}
                   >
-                    <td style={{ padding: "12px", fontSize: 14, fontWeight: 700, color: "#FF8A33" }}>#{displayIdMap.get(loan.loan_id)}</td>
-                    <td style={{ padding: "12px", fontSize: 13, color: "#2d3748" }}>{loan.user_id}</td>
-                    <td style={{ padding: "12px", fontSize: 13, color: "#2d3748" }}>{loan.user_name || "N/A"}</td>
-                    <td style={{ padding: "12px", fontSize: 13, color: "#2d3748", wordBreak: "break-word" }}>{loan.user_email}</td>
-                    <td style={{ padding: "12px" }}>
+                    <td style={{ padding: "14px 16px", fontSize: 14, fontWeight: 700, color: "#ea580c" }}>#{displayIdMap.get(loan.loan_id)}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 13, color: "#334155" }}>{loan.user_id}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 13, color: "#334155", fontWeight: 500 }}>{loan.user_name || "N/A"}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 13, color: "#334155", wordBreak: "break-word" }}>{loan.user_email}</td>
+                    <td style={{ padding: "14px 16px" }}>
                       <span
                         style={{
-                          padding: "4px 10px",
+                          padding: "4px 12px",
                           borderRadius: 999,
                           fontSize: 11,
-                          fontWeight: 800,
+                          fontWeight: 700,
                           background: st.bg,
                           color: st.color,
                           display: "inline-block",
@@ -389,7 +405,7 @@ export default function AdminDashboard() {
         !message &&
         normalizedLoans.length > 0 &&
         filteredLoans.length === 0 && (
-          <div style={{ marginTop: 40, textAlign: "center", color: "#5a6578" }}>
+          <div style={{ marginTop: 40, textAlign: "center", color: "#64748b", fontWeight: 500 }}>
             No results for "{query.trim()}".
           </div>
         )}

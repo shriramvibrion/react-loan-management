@@ -34,8 +34,9 @@ export default function Modal({ open, title, onClose, children, style }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(15, 23, 42, 0.45)",
-        backdropFilter: "blur(4px)",
+        background: "rgba(15, 23, 42, 0.5)",
+        backdropFilter: "blur(8px)",
+        animation: "fadeIn 0.2s ease",
       }}
       onClick={onClose}
       role="dialog"
@@ -44,11 +45,12 @@ export default function Modal({ open, title, onClose, children, style }) {
       <div
         style={{
           background: "#fff",
-          borderRadius: 16,
-          padding: "24px 28px",
-          minWidth: 340,
+          borderRadius: 20,
+          padding: "28px 32px",
+          minWidth: 360,
           maxWidth: 520,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(15,23,42,0.05)",
+          animation: "scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
           ...style,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -57,9 +59,10 @@ export default function Modal({ open, title, onClose, children, style }) {
           <div
             style={{
               fontSize: 18,
-              fontWeight: 800,
-              color: "#1e293b",
+              fontWeight: 700,
+              color: "#0f172a",
               marginBottom: 16,
+              fontFamily: "'Inter', sans-serif",
             }}
           >
             {title}

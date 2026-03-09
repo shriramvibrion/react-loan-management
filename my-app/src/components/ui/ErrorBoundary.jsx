@@ -38,11 +38,11 @@ export default class ErrorBoundary extends Component {
           <div
             style={{
               background: "#fff",
-              borderRadius: 18,
+              borderRadius: 20,
               padding: "40px 32px",
               maxWidth: 480,
               textAlign: "center",
-              boxShadow: "0 8px 32px rgba(15,23,42,0.12)",
+              boxShadow: "0 8px 32px rgba(15,23,42,0.08)",
             }}
           >
             <div
@@ -55,10 +55,10 @@ export default class ErrorBoundary extends Component {
             </div>
             <div
               style={{
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 20,
                 fontWeight: 800,
-                color: "#1a5fc4",
+                color: "#312e81",
                 marginBottom: 8,
               }}
             >
@@ -67,7 +67,7 @@ export default class ErrorBoundary extends Component {
             <div
               style={{
                 fontSize: 14,
-                color: "#5a6578",
+                color: "#64748b",
                 marginBottom: 20,
                 lineHeight: 1.6,
               }}

@@ -82,7 +82,7 @@ export default function Documentation() {
         padding: "20px 22px",
         boxSizing: "border-box",
         background:
-          "radial-gradient(circle at 10% 20%, #ecf3ff 0%, #dfeafe 35%, #d6e5ff 100%)",
+          "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)",
         overflowY: "auto",
       }}
     >
@@ -91,10 +91,10 @@ export default function Documentation() {
           width: "100%",
           maxWidth: 1500,
           margin: "0 auto",
-          background: "rgba(255,255,255,0.78)",
-          backdropFilter: "blur(6px)",
-          borderRadius: 18,
-          boxShadow: "0 14px 40px rgba(18, 56, 120, 0.12)",
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(18px)",
+          borderRadius: 20,
+          boxShadow: "0 14px 40px rgba(15, 23, 42, 0.08)",
           padding: "18px 18px 16px",
           boxSizing: "border-box",
         }}
@@ -104,7 +104,7 @@ export default function Documentation() {
             borderRadius: 16,
             padding: "14px 16px 12px",
             background:
-              "linear-gradient(130deg, rgba(27,92,188,0.96), rgba(17,145,204,0.97))",
+              "linear-gradient(130deg, #4338ca, #6366f1)",
             color: "#fff",
             display: "flex",
             flexDirection: "column",
@@ -259,8 +259,8 @@ export default function Documentation() {
                     letterSpacing: 0.9,
                     background:
                       "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(224,236,255,0.96))",
-                    color: "#1a5fc4",
-                    boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
+                    color: "#4338ca",
+                    boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
                   }}
                   onClick={() => navigate("/user/dashboard")}
                 >
@@ -296,17 +296,17 @@ export default function Documentation() {
           <div
             style={{
               background: "#ffffff",
-              border: "1px solid #d5e2fb",
-              borderRadius: 14,
+              border: "1px solid rgba(99,102,241,0.12)",
+              borderRadius: 16,
               padding: "12px 14px",
             }}
           >
             <div
               style={{
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 16,
                 fontWeight: 800,
-                color: "#1a4ea1",
+                color: "#312e81",
                 marginBottom: 10,
               }}
             >
@@ -317,10 +317,10 @@ export default function Documentation() {
                 <section
                   key={section.title}
                   style={{
-                    border: "1px solid #e0e8f8",
+                    border: "1px solid rgba(99,102,241,0.1)",
                     borderRadius: 12,
                     padding: "10px 11px",
-                    background: idx % 2 === 0 ? "#f9fbff" : "#f4f8ff",
+                    background: idx % 2 === 0 ? "#f8faff" : "#eef2ff",
                   }}
                 >
                   <h3
@@ -328,7 +328,7 @@ export default function Documentation() {
                       fontSize: 15,
                       marginBottom: 6,
                       fontWeight: 800,
-                      color: "#1a4ea1",
+                      color: "#312e81",
                     }}
                   >
                     {idx + 1}. {section.title}
@@ -347,8 +347,8 @@ export default function Documentation() {
             <section
               style={{
                 background: "#ffffff",
-                border: "1px solid #d5e2fb",
-                borderRadius: 14,
+                border: "1px solid rgba(99,102,241,0.12)",
+                borderRadius: 16,
                 padding: "10px 12px",
               }}
             >
@@ -357,7 +357,7 @@ export default function Documentation() {
                   fontSize: 15,
                   marginBottom: 6,
                   fontWeight: 800,
-                  color: "#1a4ea1",
+                  color: "#312e81",
                 }}
               >
                 5. Do&apos;s
@@ -372,8 +372,8 @@ export default function Documentation() {
             <section
               style={{
                 background: "#ffffff",
-                border: "1px solid #d5e2fb",
-                borderRadius: 14,
+                border: "1px solid rgba(99,102,241,0.12)",
+                borderRadius: 16,
                 padding: "10px 12px",
               }}
             >
@@ -382,7 +382,7 @@ export default function Documentation() {
                   fontSize: 15,
                   marginBottom: 6,
                   fontWeight: 800,
-                  color: "#1a4ea1",
+                  color: "#312e81",
                 }}
               >
                 6. Don&apos;ts
@@ -396,9 +396,9 @@ export default function Documentation() {
 
             <section
               style={{
-                background: "linear-gradient(180deg, #edf4ff 0%, #e5efff 100%)",
-                border: "1px solid #c8dafc",
-                borderRadius: 14,
+                background: "linear-gradient(180deg, #eef2ff 0%, #e0e7ff 100%)",
+                border: "1px solid #c7d2fe",
+                borderRadius: 16,
                 padding: "10px 12px",
               }}
             >
@@ -407,7 +407,7 @@ export default function Documentation() {
                   fontSize: 15,
                   marginBottom: 6,
                   fontWeight: 800,
-                  color: "#154186",
+                  color: "#312e81",
                 }}
               >
                 7. Important Disclaimers
@@ -427,9 +427,9 @@ export default function Documentation() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            borderTop: "1px solid #d7e4fb",
+            borderTop: "1px solid rgba(99,102,241,0.12)",
             paddingTop: 10,
-            color: "#33558f",
+            color: "#64748b",
             fontSize: 12,
           }}
         >

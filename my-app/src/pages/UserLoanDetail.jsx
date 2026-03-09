@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { fetchUserLoanDetail, updateUserLoanContact, API_BASE_URL } from "../services/loanService";
@@ -10,6 +10,8 @@ import InfoRow from "../components/ui/InfoRow";
 export default function UserLoanDetail() {
   const navigate = useNavigate();
   const { loanId } = useParams();
+  const location = useLocation();
+  const displayId = location.state?.displayId || loanId;
   const { userEmail } = useAuth();
   const toast = useToast();
   const [data, setData] = useState(null);
@@ -76,7 +78,7 @@ export default function UserLoanDetail() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)" }}>
         <Loader text="Loading loan details..." size={36} />
       </div>
     );
@@ -84,9 +86,9 @@ export default function UserLoanDetail() {
 
   if (message && !data) {
     return (
-      <div style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)", color: "#0f172a" }}>
-        <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(255,255,255,0.55)", borderRadius: 18, padding: 18, boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)", backdropFilter: "blur(16px)" }}>
-          <div style={{ color: "#1a5fc4", marginBottom: 16, fontWeight: 700 }}>{message}</div>
+      <div style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)", color: "#0f172a" }}>
+        <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(255,255,255,0.92)", borderRadius: 18, padding: 18, boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)", backdropFilter: "blur(16px)" }}>
+          <div style={{ color: "#4338ca", marginBottom: 16, fontWeight: 700 }}>{message}</div>
           <button className="home-btn-blue" onClick={() => navigate("/user/dashboard")}>Back</button>
         </div>
       </div>
@@ -104,7 +106,7 @@ export default function UserLoanDetail() {
         width: "100vw",
         padding: "22px 18px",
         boxSizing: "border-box",
-        background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)",
+        background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)",
         overflowX: "hidden",
         overflowY: "auto",
         color: "#0f172a",
@@ -114,21 +116,21 @@ export default function UserLoanDetail() {
         style={{
           width: "min(1120px, 96vw)",
           margin: "0 auto",
-          background: "rgba(255,255,255,0.55)",
-          border: "1px solid rgba(255,255,255,0.65)",
-          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-          borderRadius: 18,
-          padding: 18,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(99,102,241,0.08)",
+          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
+          borderRadius: 20,
+          padding: 24,
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 22, fontWeight: 900, color: "#1a5fc4" }}>
-              Loan #{loan?.loan_id} — Details
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, color: "#312e81", letterSpacing: "-0.3px" }}>
+              Loan #{displayId} — Details
             </div>
-            <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
               View your application status, details, and documents
             </div>
           </div>
@@ -148,7 +150,7 @@ export default function UserLoanDetail() {
             </span>
             <button
               className="home-btn-blue"
-              style={{ width: "auto", padding: "10px 18px", background: "rgba(255,255,255,0.9)", border: "1px solid rgba(26,95,196,0.5)", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+              style={{ width: "auto", padding: "10px 18px", background: "rgba(255,255,255,0.95)", border: "1px solid rgba(99,102,241,0.25)", boxShadow: "0 1px 3px rgba(15,23,42,0.04)", borderRadius: 10 }}
               onClick={() => navigate("/user/dashboard")}
             >
               Back to Dashboard
@@ -157,7 +159,7 @@ export default function UserLoanDetail() {
         </div>
 
         {message && (
-          <div style={{ padding: 12, borderRadius: 10, background: "rgba(26,95,196,0.08)", color: "#1a5fc4", marginBottom: 16, fontWeight: 700 }}>
+          <div style={{ padding: 12, borderRadius: 10, background: "rgba(99,102,241,0.06)", color: "#4338ca", marginBottom: 16, fontWeight: 600 }}>
             {message}
           </div>
         )}
@@ -242,16 +244,17 @@ export default function UserLoanDetail() {
                     justifyContent: "space-between",
                     alignItems: "center",
                     padding: "12px 14px",
-                    background: "rgba(255,255,255,0.75)",
-                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.85)",
+                    borderRadius: 12,
                     flexWrap: "wrap",
                     gap: 10,
-                    border: "1px solid rgba(0,0,0,0.05)",
+                    border: "1px solid rgba(15,23,42,0.05)",
+                    transition: "all 0.2s ease",
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 800, color: "#2d3748" }}>{doc.document_type}</div>
-                    <div style={{ fontSize: 12, color: "#5a6578" }}>{doc.original_filename}</div>
+                    <div style={{ fontWeight: 700, color: "#1e293b" }}>{doc.document_type}</div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>{doc.original_filename}</div>
                   </div>
                   <a
                     href={docViewUrl(doc.document_id)}
@@ -259,13 +262,14 @@ export default function UserLoanDetail() {
                     rel="noopener noreferrer"
                     style={{
                       padding: "8px 16px",
-                      borderRadius: 8,
-                      background: "#1a5fc4",
+                      borderRadius: 10,
+                      background: "linear-gradient(135deg, #6366f1, #4338ca)",
                       color: "#fff",
                       textDecoration: "none",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       fontSize: 13,
-                      boxShadow: "0 8px 18px rgba(26,95,196,0.22)",
+                      boxShadow: "0 4px 12px rgba(99,102,241,0.25)",
+                      transition: "all 0.2s ease",
                     }}
                   >
                     View / Download
@@ -274,7 +278,7 @@ export default function UserLoanDetail() {
               ))}
             </div>
           ) : (
-            <div style={{ color: "#5a6578" }}>No documents uploaded.</div>
+            <div style={{ color: "#64748b" }}>No documents uploaded.</div>
           )}
         </Section>
       </div>

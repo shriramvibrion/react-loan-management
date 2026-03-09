@@ -1,7 +1,7 @@
 /**
  * Spinner loader component.
  */
-export default function Loader({ size = 28, color = "#2b7de9", text, style }) {
+export default function Loader({ size = 28, color = "#6366f1", text, style }) {
   return (
     <div
       style={{
@@ -9,8 +9,8 @@ export default function Loader({ size = 28, color = "#2b7de9", text, style }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
-        padding: 20,
+        gap: 12,
+        padding: 24,
         ...style,
       }}
     >
@@ -18,14 +18,14 @@ export default function Loader({ size = 28, color = "#2b7de9", text, style }) {
         style={{
           width: size,
           height: size,
-          border: `3px solid ${color}33`,
+          border: `3px solid ${color}1a`,
           borderTopColor: color,
           borderRadius: "50%",
           animation: "spin 0.7s linear infinite",
         }}
       />
       {text && (
-        <div style={{ fontSize: 14, color: "#5a6578", fontWeight: 700 }}>
+        <div style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>
           {text}
         </div>
       )}

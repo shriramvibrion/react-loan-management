@@ -165,9 +165,6 @@ def apply_loan():
         required_file_keys = [
             "pan_file",
             "aadhaar_file",
-            "income_tax_certificate",
-            "tax_document",
-            "employment_proof",
         ]
         missing_core_files = [
             key for key in required_file_keys

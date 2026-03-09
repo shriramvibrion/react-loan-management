@@ -7,8 +7,8 @@ export default function Input({ style, ...props }) {
       style={{
         width: "100%",
         padding: "10px 14px",
-        borderRadius: "8px",
-        border: "1px solid #cbd5e1",
+        borderRadius: "10px",
+        border: "1px solid #e2e8f0",
         fontSize: "14px",
         color: "#1e293b",
         outline: "none",

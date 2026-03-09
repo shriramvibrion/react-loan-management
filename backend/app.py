@@ -11,10 +11,10 @@ from userLogin import user_login_bp
 from loanRoutes import loan_bp
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10MB max upload
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max upload
 
 # CORS — restrict to known origins in production
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 CORS(app, origins=[o.strip() for o in allowed_origins])
 
 # ── Simple in-memory rate limiter for login/register endpoints ────────────

@@ -15,8 +15,8 @@ export default function FormField({
         <label
           style={{
             fontSize: 13,
-            fontWeight: 700,
-            color: "#2d3748",
+            fontWeight: 600,
+            color: "#334155",
             marginBottom: 6,
             display: "block",
           }}

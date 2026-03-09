@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import {
   fetchAdminLoanDetail,
@@ -17,6 +17,8 @@ import { useToast } from "../context/ToastContext";
 export default function AdminLoanDetail() {
   const navigate = useNavigate();
   const { loanId } = useParams();
+  const location = useLocation();
+  const displayId = location.state?.displayId || loanId;
   const toast = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function AdminLoanDetail() {
           minHeight: "100vh",
           padding: 22,
           background:
-            "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)",
+            "radial-gradient(900px 600px at 18% 10%, rgba(249,115,22,0.12) 0%, rgba(249,115,22,0) 55%), linear-gradient(160deg, #fffbf5 0%, #f8fafc 45%, #f1f5f9 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -93,24 +95,24 @@ export default function AdminLoanDetail() {
           minHeight: "100vh",
           padding: 22,
           background:
-            "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)",
-          color: "#2d3748",
+            "radial-gradient(900px 600px at 18% 10%, rgba(249,115,22,0.12) 0%, rgba(249,115,22,0) 55%), linear-gradient(160deg, #fffbf5 0%, #f8fafc 45%, #f1f5f9 100%)",
+          color: "#1e293b",
         }}
       >
         <div
           style={{
             width: "min(1120px, 96vw)",
             margin: "0 auto",
-            background: "rgba(255,255,255,0.55)",
-            border: "1px solid rgba(255,255,255,0.65)",
-            boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-            borderRadius: 18,
-            padding: 18,
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
+            background: "rgba(255,255,255,0.92)",
+            border: "1px solid rgba(249,115,22,0.08)",
+            boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
+            borderRadius: 20,
+            padding: 24,
+            backdropFilter: "blur(18px)",
+            WebkitBackdropFilter: "blur(18px)",
           }}
         >
-          <div style={{ color: "#FF8A33", marginBottom: 16, fontWeight: 700 }}>
+          <div style={{ color: "#ea580c", marginBottom: 16, fontWeight: 600 }}>
             {message}
           </div>
           <button className="home-btn-orange" onClick={onBack}>
@@ -146,23 +148,23 @@ export default function AdminLoanDetail() {
         padding: "22px 18px",
         boxSizing: "border-box",
         background:
-          "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)",
+          "radial-gradient(900px 600px at 18% 10%, rgba(249,115,22,0.12) 0%, rgba(249,115,22,0) 55%), linear-gradient(160deg, #fffbf5 0%, #f8fafc 45%, #f1f5f9 100%)",
         overflowX: "hidden",
         overflowY: "auto",
-        color: "#2d3748",
+        color: "#1e293b",
       }}
     >
       <div
         style={{
           width: "min(1120px, 96vw)",
           margin: "0 auto",
-          background: "rgba(255,255,255,0.55)",
-          border: "1px solid rgba(255,255,255,0.65)",
-          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-          borderRadius: 18,
-          padding: 18,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(249,115,22,0.08)",
+          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
+          borderRadius: 20,
+          padding: 24,
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
         }}
       >
         <div
@@ -178,15 +180,16 @@ export default function AdminLoanDetail() {
           <div>
             <div
               style={{
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 22,
-                fontWeight: 900,
-                color: "#FF8A33",
+                fontWeight: 800,
+                color: "#c2410c",
+                letterSpacing: "-0.3px",
               }}
             >
-              Loan #{loan?.loan_id} - Review Application
+              Loan #{displayId} - Review Application
             </div>
-            <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
               Verify applicant details and documents
             </div>
           </div>
@@ -219,10 +222,11 @@ export default function AdminLoanDetail() {
               style={{
                 width: "auto",
                 padding: "10px 18px",
-                background: "rgba(255,255,255,0.9)",
-                color: "#FF8A33",
-                border: "1px solid rgba(255,138,51,0.5)",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                background: "rgba(255,255,255,0.95)",
+                color: "#ea580c",
+                border: "1px solid rgba(249,115,22,0.25)",
+                boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+                borderRadius: 10,
               }}
               onClick={onBack}
             >
@@ -236,10 +240,10 @@ export default function AdminLoanDetail() {
             style={{
               padding: 12,
               borderRadius: 10,
-              background: "rgba(255,138,51,0.10)",
-              color: "#FF8A33",
+              background: "rgba(249,115,22,0.06)",
+              color: "#ea580c",
               marginBottom: 16,
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           >
             {message}
@@ -307,16 +311,17 @@ export default function AdminLoanDetail() {
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "12px 14px",
-                        background: "rgba(255,255,255,0.75)",
-                        borderRadius: 10,
+                        background: "rgba(255,255,255,0.85)",
+                        borderRadius: 12,
                         flexWrap: "wrap",
                         gap: 10,
-                        border: "1px solid rgba(0,0,0,0.05)",
+                        border: "1px solid rgba(15,23,42,0.05)",
+                        transition: "all 0.2s ease",
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 800, color: "#2d3748" }}>{doc.document_type}</div>
-                        <div style={{ fontSize: 12, color: "#5a6578" }}>{doc.original_filename}</div>
+                        <div style={{ fontWeight: 700, color: "#1e293b" }}>{doc.document_type}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{doc.original_filename}</div>
                       </div>
                       <a
                         href={docViewUrl(doc.document_id)}
@@ -324,13 +329,14 @@ export default function AdminLoanDetail() {
                         rel="noopener noreferrer"
                         style={{
                           padding: "8px 16px",
-                          borderRadius: 8,
-                          background: "#FF8A33",
+                          borderRadius: 10,
+                          background: "linear-gradient(135deg, #f97316, #ea580c)",
                           color: "#fff",
                           textDecoration: "none",
-                          fontWeight: 800,
+                          fontWeight: 700,
                           fontSize: 13,
-                          boxShadow: "0 8px 18px rgba(255,138,51,0.22)",
+                          boxShadow: "0 4px 12px rgba(249,115,22,0.25)",
+                          transition: "all 0.2s ease",
                         }}
                       >
                         View / Download
@@ -339,7 +345,7 @@ export default function AdminLoanDetail() {
                   ))}
                 </div>
               ) : (
-                <div style={{ color: "#5a6578" }}>No documents uploaded.</div>
+                <div style={{ color: "#64748b" }}>No documents uploaded.</div>
               )}
             </Section>
 
@@ -378,7 +384,7 @@ export default function AdminLoanDetail() {
               onClose={() => setConfirmAction(null)}
             >
               <p style={{ color: "#475569", marginBottom: 20 }}>
-                Are you sure you want to {confirmAction === "Approved" ? "approve" : "reject"} Loan #{loan?.loan_id}?
+                Are you sure you want to {confirmAction === "Approved" ? "approve" : "reject"} Loan #{displayId}?
                 This action cannot be undone.
               </p>
               <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
@@ -403,7 +409,7 @@ export default function AdminLoanDetail() {
             </Modal>
 
             {!isPending && (
-              <div style={{ marginTop: 16, color: "#5a6578", fontSize: 14 }}>
+              <div style={{ marginTop: 16, color: "#64748b", fontSize: 14 }}>
                 This loan has already been {loan?.status?.toLowerCase()}.
               </div>
             )}
@@ -414,16 +420,16 @@ export default function AdminLoanDetail() {
               style={{
                 position: "sticky",
                 top: 12,
-                background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
-                borderRadius: 18,
-                padding: 18,
-                border: "1px solid #dbe4f2",
-                boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
+                background: "linear-gradient(180deg, #ffffff 0%, #fffaf5 100%)",
+                borderRadius: 20,
+                padding: 22,
+                border: "1px solid rgba(249,115,22,0.1)",
+                boxShadow: "0 8px 24px rgba(15,23,42,0.06)",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#102a56", lineHeight: 1.1 }}>
-                  Loan #{loan?.loan_id} Analytics
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#c2410c", lineHeight: 1.1, fontFamily: "'Montserrat', sans-serif" }}>
+                  Loan #{displayId} Analytics
                 </div>
                 <span
                   style={{
@@ -444,21 +450,21 @@ export default function AdminLoanDetail() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8, marginBottom: 16 }}>
-                <div style={{ background: "#f1f6ff", borderRadius: 10, padding: "8px 10px" }}>
+                <div style={{ background: "#fff7ed", borderRadius: 12, padding: "10px 12px" }}>
                   <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Amount</div>
                   <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 800 }}>Rs {amount.toLocaleString()}</div>
                 </div>
-                <div style={{ background: "#f1f6ff", borderRadius: 10, padding: "8px 10px" }}>
+                <div style={{ background: "#fff7ed", borderRadius: 12, padding: "10px 12px" }}>
                   <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>EMI</div>
                   <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 800 }}>Rs {Math.round(emi).toLocaleString()}</div>
                 </div>
-                <div style={{ background: "#f1f6ff", borderRadius: 10, padding: "8px 10px" }}>
+                <div style={{ background: "#fff7ed", borderRadius: 12, padding: "10px 12px" }}>
                   <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Tenure</div>
                   <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 800 }}>{tenure} months</div>
                 </div>
               </div>
 
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#102a56", marginBottom: 10 }}>Amount Progress</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#c2410c", marginBottom: 10, fontFamily: "'Montserrat', sans-serif" }}>Amount Progress</div>
               <div style={{ marginBottom: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 44px", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div style={{ fontSize: 14, color: "#334155", fontWeight: 700 }}>Paid</div>
@@ -479,9 +485,9 @@ export default function AdminLoanDetail() {
                 Paid: Rs {Math.round(paidAmount).toLocaleString()} | Remaining: Rs {Math.round(remainingAmount).toLocaleString()}
               </div>
 
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#102a56", marginBottom: 10 }}>Month Completion</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#c2410c", marginBottom: 10, fontFamily: "'Montserrat', sans-serif" }}>Month Completion</div>
               <div style={{ height: 12, borderRadius: 999, background: "#e2e8f0", overflow: "hidden", marginBottom: 8 }}>
-                <div style={{ width: `${monthPercent}%`, height: "100%", background: "#2563eb" }} />
+                <div style={{ width: `${monthPercent}%`, height: "100%", background: "linear-gradient(90deg, #f97316, #ea580c)", transition: "width 0.6s ease" }} />
               </div>
               <div style={{ fontSize: 13, color: "#475569" }}>
                 Completed: {completedMonths} month(s) | Remaining: {remainingMonths} month(s) ({monthPercent}% completed)

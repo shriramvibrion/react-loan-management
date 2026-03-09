@@ -32,11 +32,12 @@ export default function ApplyLoan() {
     validate,
     buildFormData,
     loadFromServer,
-  } = useLoanForm();
+  } = useLoanForm(userEmail);
 
   // Load draft from server when ?draft=<loanId> is present
+  const [draftLoaded, setDraftLoaded] = useState(false);
   useEffect(() => {
-    if (!draftLoanId || !userEmail) return;
+    if (!draftLoanId || !userEmail || draftLoaded) return;
     let cancelled = false;
     const loadDraft = async () => {
       try {
@@ -44,6 +45,7 @@ export default function ApplyLoan() {
         if (!cancelled && data.loan?.status === "Draft") {
           loadFromServer(data.loan, data.applicant);
           toast.info("Draft loaded — continue your application.");
+          setDraftLoaded(true);
         }
       } catch {
         // Draft not found or access denied — start fresh
@@ -51,7 +53,7 @@ export default function ApplyLoan() {
     };
     loadDraft();
     return () => { cancelled = true; };
-  }, [draftLoanId, userEmail, loadFromServer, toast]);
+  }, [draftLoanId, userEmail, draftLoaded, loadFromServer, toast]);
 
   const handleSaveDraft = async () => {
     if (savingDraft) return;
@@ -99,12 +101,12 @@ export default function ApplyLoan() {
     }
   };
 
-  const labelStyle = { fontSize: 13, fontWeight: 700, color: "#2d3748", marginBottom: 6, display: "block" };
+  const labelStyle = { fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6, display: "block" };
   const inputStyle = {
     width: "100%",
     padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    border: "1px solid #e2e8f0",
     fontSize: "14px",
     color: "#1e293b",
     outline: "none",
@@ -112,17 +114,19 @@ export default function ApplyLoan() {
     boxSizing: "border-box"
   };
   const sectionCardStyle = {
-    background: "#fff",
-    borderRadius: "12px",
-    border: "1px solid #e2e8f0",
+    background: "rgba(255,255,255,0.95)",
+    borderRadius: "16px",
+    border: "1px solid rgba(15,23,42,0.06)",
     padding: "24px",
-    marginBottom: "24px"
+    marginBottom: "24px",
+    boxShadow: "0 1px 3px rgba(15,23,42,0.04)"
   };
   const sectionTitleStyle = {
     fontSize: "18px",
     fontWeight: "800",
-    color: "#1a5fc4",
-    marginBottom: "8px"
+    color: "#312e81",
+    marginBottom: "8px",
+    fontFamily: "'Montserrat', sans-serif"
   };
   const sectionSubtitleStyle = {
     fontSize: "13px",
@@ -138,7 +142,7 @@ export default function ApplyLoan() {
         width: "100vw",
         padding: "40px 20px",
         boxSizing: "border-box",
-        background: "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)",
+        background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)",
         overflowX: "hidden",
         overflowY: "auto",
         display: "flex",
@@ -151,25 +155,25 @@ export default function ApplyLoan() {
         style={{
           width: "100%",
           maxWidth: "1000px",
-          background: "rgba(255,255,255,0.9)",
-          border: "1px solid rgba(255,255,255,0.65)",
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(99,102,241,0.08)",
           boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
-          borderRadius: "18px",
+          borderRadius: "20px",
           padding: "32px 40px",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          backdropFilter: "blur(18px)",
+          WebkitBackdropFilter: "blur(18px)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "32px", gap: "16px", flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ fontFamily: "Montserrat, sans-serif", fontSize: "28px", fontWeight: "900", color: "#1a5fc4", margin: "0 0 8px 0" }}>
+            <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "28px", fontWeight: "800", color: "#312e81", margin: "0 0 8px 0", letterSpacing: "-0.3px" }}>
               Loan Application
             </h1>
             <p style={{ fontSize: "14px", color: "#64748b", margin: 0, maxWidth: "500px", lineHeight: "1.5" }}>
               Provide your personal details, loan preferences, and key documents for a smooth and secure approval process.
             </p>
           </div>
-          <div style={{ background: "#eff6ff", color: "#1a5fc4", padding: "8px 16px", borderRadius: "99px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+          <div style={{ background: "#eef2ff", color: "#4338ca", padding: "8px 16px", borderRadius: "99px", fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", textTransform: "uppercase" }}>
             ALL KEY FIELDS ARE MANDATORY
           </div>
         </div>
@@ -320,8 +324,8 @@ export default function ApplyLoan() {
               {incomeDocs.map((docType) => (
                 <div key={docType}>
                   <label style={labelStyle}>{docType} {requiredStar}</label>
-                  <input type="file" required style={{...inputStyle, padding: "7px 10px"}} onChange={(e) => handleFileChange(docType, e)} />
-                  {files[docType] && <div style={{ marginTop: 4, fontSize: 12, color: "#16a34a" }}>✓ {files[docType].name}</div>}
+                  <input type="file" required style={{...inputStyle, padding: "7px 10px"}} onChange={(e) => handleFileChange(`Income - ${docType}`, e)} />
+                  {files[`Income - ${docType}`] && <div style={{ marginTop: 4, fontSize: 12, color: "#16a34a" }}>✓ {files[`Income - ${docType}`].name}</div>}
                 </div>
               ))}
 
@@ -350,8 +354,8 @@ export default function ApplyLoan() {
             <h2 style={sectionTitleStyle}>Agreement Confirmation {requiredStar}</h2>
             <p style={sectionSubtitleStyle}>Confirm your agreement decision before saving draft or submitting.</p>
             
-            <div style={{ background: "#eff6ff", borderRadius: "8px", padding: "16px", marginBottom: "16px", border: "1px solid #dbeafe" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#1e3a8a", margin: "0 0 8px 0" }}>Terms {"&"} Policies</h3>
+            <div style={{ background: "#eef2ff", borderRadius: "10px", padding: "16px", marginBottom: "16px", border: "1px solid #c7d2fe" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: "700", color: "#312e81", margin: "0 0 8px 0" }}>Terms {"&"} Policies</h3>
               <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: "#334155", lineHeight: "1.6" }}>
                 <li>Provided details and documents must be correct and authentic.</li>
                 <li>Application approval is subject to lender verification and policy checks.</li>
@@ -390,7 +394,7 @@ export default function ApplyLoan() {
             <button 
               type="button" 
               onClick={() => navigate("/user/dashboard")} 
-              style={{ background: "none", border: "none", color: "#1a5fc4", fontWeight: "700", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", padding: "12px 16px" }}
+              style={{ background: "none", border: "none", color: "#4338ca", fontWeight: "700", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", padding: "12px 16px" }}
             >
                Back
             </button>
@@ -398,7 +402,7 @@ export default function ApplyLoan() {
               <button 
                 type="button" 
                 onClick={handleSaveDraft} 
-                style={{ background: "transparent", border: "none", color: "#1a5fc4", fontWeight: "800", fontSize: "15px", cursor: "pointer", padding: "12px 16px" }}
+                style={{ background: "transparent", border: "none", color: "#4338ca", fontWeight: "700", fontSize: "15px", cursor: "pointer", padding: "12px 16px" }}
               >
                 Save Draft
               </button>
@@ -406,7 +410,7 @@ export default function ApplyLoan() {
                 type="submit" 
                 disabled={submitting} 
                 className="btn-blue"
-                style={{ background: "#1a5fc4", color: "#fff", border: "none", borderRadius: "8px", padding: "16px 32px", fontWeight: "800", fontSize: "15px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, transition: "transform 0.2s, background 0.2s", boxShadow: "0 4px 14px rgba(26, 95, 196, 0.4)" }}
+                style={{ background: "linear-gradient(135deg, #6366f1, #4338ca)", color: "#fff", border: "none", borderRadius: "12px", padding: "16px 32px", fontWeight: "700", fontSize: "15px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)", boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
                 onMouseOver={(e) => !submitting && (e.currentTarget.style.transform = "translateY(-2px)")}
                 onMouseOut={(e) => !submitting && (e.currentTarget.style.transform = "translateY(0)")}
               >

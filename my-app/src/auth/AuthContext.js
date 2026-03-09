@@ -40,6 +40,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     setUser(null);
+    try { localStorage.removeItem("ezl_apply_draft"); } catch { /* ignore */ }
   }, []);
 
   const value = {

@@ -45,10 +45,10 @@ export default function UserLoanAnalytics() {
     <DashboardLayout>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 24, fontWeight: 900, color: "#1a5fc4" }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 800, color: "#312e81", letterSpacing: "-0.3px" }}>
             Loan Analytics
           </div>
-          <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
             Overview of your accepted loan progress
           </div>
         </div>
@@ -59,7 +59,7 @@ export default function UserLoanAnalytics() {
 
       {loading && <Loader text="Loading analytics..." />}
       {message && !loading && (
-        <div style={{ padding: 12, background: "rgba(26,95,196,0.06)", borderRadius: 10, color: "#1a5fc4", fontWeight: 700 }}>{message}</div>
+        <div style={{ padding: 12, background: "rgba(99,102,241,0.06)", borderRadius: 10, color: "#4338ca", fontWeight: 600 }}>{message}</div>
       )}
 
       {!loading && !message && accepted.length === 0 && (
@@ -77,7 +77,7 @@ export default function UserLoanAnalytics() {
 
           <Section title="Overall Repayment Progress">
             <ProgressBar percent={overallPaidPercent} color="#16a34a" height={14} />
-            <div style={{ fontSize: 13, color: "#5a6578", marginTop: 6 }}>
+            <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>
               Paid Rs {Math.round(totalPaid).toLocaleString()} of Rs {totalAmount.toLocaleString()}
             </div>
           </Section>
@@ -87,25 +87,26 @@ export default function UserLoanAnalytics() {
               <div
                 key={loan.loan_id}
                 style={{
-                  background: "#fff",
-                  borderRadius: 14,
-                  padding: 16,
-                  border: "1px solid rgba(0,0,0,0.06)",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  background: "rgba(255,255,255,0.97)",
+                  borderRadius: 16,
+                  padding: 18,
+                  border: "1px solid rgba(15,23,42,0.06)",
+                  boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+                  transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#1a5fc4" }}>Loan #{loan.loan_id}</div>
-                    <div style={{ fontSize: 12, color: "#5a6578" }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: "#312e81", fontFamily: "'Montserrat', sans-serif" }}>Loan #{loan.loan_id}</div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>
                       Applied: {loan.applied_date ? new Date(loan.applied_date).toLocaleDateString() : "N/A"}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, fontSize: 13 }}>
-                    <span style={{ padding: "4px 10px", borderRadius: 8, background: "#f1f5f9", fontWeight: 700 }}>
+                    <span style={{ padding: "4px 10px", borderRadius: 8, background: "#eef2ff", fontWeight: 600, color: "#312e81" }}>
                       Rs {loan.amount.toLocaleString()}
                     </span>
-                    <span style={{ padding: "4px 10px", borderRadius: 8, background: "#f1f5f9", fontWeight: 700 }}>
+                    <span style={{ padding: "4px 10px", borderRadius: 8, background: "#eef2ff", fontWeight: 600, color: "#312e81" }}>
                       {loan.tenure} months
                     </span>
                   </div>
@@ -114,13 +115,13 @@ export default function UserLoanAnalytics() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <ProgressBar percent={loan.paidPercent} color="#16a34a" height={10} label="Amount Progress" />
-                    <div style={{ fontSize: 12, color: "#5a6578", marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                       Paid: Rs {Math.round(loan.amountPaid).toLocaleString()} | Remaining: Rs {Math.round(loan.amountRemaining).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <ProgressBar percent={loan.monthCompletedPercent} color="#2563eb" height={10} label="Tenure Progress" />
-                    <div style={{ fontSize: 12, color: "#5a6578", marginTop: 4 }}>
+                    <ProgressBar percent={loan.monthCompletedPercent} color="#6366f1" height={10} label="Tenure Progress" />
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                       {loan.monthsCompleted} of {loan.tenure} months completed
                     </div>
                   </div>

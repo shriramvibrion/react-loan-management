@@ -2,35 +2,69 @@ export default function DashboardLayout({ children, variant = "blue" }) {
   const isOrange = variant === "orange";
 
   const outerBackground = isOrange
-    ? "radial-gradient(900px 600px at 18% 10%, rgba(255,138,51,0.20) 0%, rgba(255,138,51,0) 55%), linear-gradient(160deg, #f8fafc 0%, #f3f4f6 45%, #eef2f7 100%)"
-    : "radial-gradient(circle at 10% 20%, #ebf2ff 0%, #e3ecff 40%, #d9e6ff 100%)";
+    ? "linear-gradient(135deg, #faf5ff 0%, #fef7f0 30%, #fff7ed 60%, #f8fafc 100%)"
+    : "linear-gradient(135deg, #f0f4ff 0%, #eef2ff 30%, #e8ecff 60%, #f8fafc 100%)";
 
-  const textColor = isOrange ? "#2d3748" : "#0f172a";
+  const textColor = isOrange ? "#1e293b" : "#0f172a";
+  const accentColor = isOrange ? "#f97316" : "#6366f1";
 
   return (
     <div
       style={{
         height: "100vh",
         width: "100vw",
-        padding: "22px 18px",
+        padding: "24px 20px",
         boxSizing: "border-box",
         background: outerBackground,
         overflowX: "hidden",
         overflowY: "auto",
         color: textColor,
+        position: "relative",
       }}
     >
+      {/* Subtle decorative gradient orbs */}
+      <div style={{
+        position: "fixed",
+        top: "-10%",
+        right: "-5%",
+        width: "500px",
+        height: "500px",
+        borderRadius: "50%",
+        background: isOrange
+          ? "radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%)"
+          : "radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)",
+        pointerEvents: "none",
+        zIndex: 0,
+      }} />
+      <div style={{
+        position: "fixed",
+        bottom: "-15%",
+        left: "-5%",
+        width: "600px",
+        height: "600px",
+        borderRadius: "50%",
+        background: isOrange
+          ? "radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 70%)"
+          : "radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 70%)",
+        pointerEvents: "none",
+        zIndex: 0,
+      }} />
+
       <div
         style={{
-          width: "min(1120px, 96vw)",
+          width: "min(1200px, 96vw)",
           margin: "0 auto",
-          background: "rgba(255,255,255,0.55)",
-          border: "1px solid rgba(255,255,255,0.65)",
-          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.12)",
-          borderRadius: 18,
-          padding: 18,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          background: "rgba(255,255,255,0.72)",
+          border: "1px solid rgba(255,255,255,0.8)",
+          boxShadow: "0 20px 60px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04)",
+          borderRadius: 20,
+          padding: 24,
+          backdropFilter: "blur(20px) saturate(1.3)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.3)",
+          position: "relative",
+          zIndex: 1,
+          animation: "fadeIn 0.4s ease both",
+          borderTop: `2px solid ${accentColor}18`,
         }}
       >
         {children}

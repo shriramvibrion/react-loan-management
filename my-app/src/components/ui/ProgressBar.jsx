@@ -3,8 +3,8 @@
  */
 export default function ProgressBar({
   percent = 0,
-  color = "#16a34a",
-  height = 12,
+  color = "#10b981",
+  height = 10,
   label,
   showPercent = true,
   style,
@@ -18,10 +18,10 @@ export default function ProgressBar({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: 4,
+            marginBottom: 6,
           }}
         >
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
             {label}
           </span>
           {showPercent && (
@@ -35,16 +35,19 @@ export default function ProgressBar({
         style={{
           height,
           borderRadius: 999,
-          background: "#e2e8f0",
+          background: "#f1f5f9",
           overflow: "hidden",
+          boxShadow: "inset 0 1px 2px rgba(0,0,0,0.06)",
         }}
       >
         <div
           style={{
             width: `${clamped}%`,
             height: "100%",
-            background: color,
-            transition: "width 0.5s ease",
+            background: `linear-gradient(90deg, ${color}, ${color}dd)`,
+            borderRadius: 999,
+            transition: "width 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+            boxShadow: `0 0 8px ${color}33`,
           }}
         />
       </div>

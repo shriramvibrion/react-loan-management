@@ -77,17 +77,17 @@ export default function UserDashboard() {
 
   return (
     <DashboardLayout>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 24, fontWeight: 900, color: "#1a5fc4" }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, color: "#4f46e5", letterSpacing: "-0.3px" }}>
             My Loan Applications
           </div>
-          <div style={{ fontSize: 14, color: "#5a6578", marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
             Track your loans and their status
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Button variant="primary" size="sm" onClick={() => navigate("/user/apply")}>
             + Apply New
           </Button>
@@ -100,37 +100,38 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Total", value: loans.length, accent: "#1a5fc4" },
-          { label: "Draft", value: bucketCounts.Draft, accent: "#6b7280" },
-          { label: "Pending", value: bucketCounts.Pending, accent: "#d97706" },
-          { label: "Accepted", value: bucketCounts.Accepted, accent: "#16a34a" },
-          { label: "Rejected", value: bucketCounts.Rejected, accent: "#dc2626" },
+          { label: "Total", value: loans.length, accent: "#6366f1" },
+          { label: "Draft", value: bucketCounts.Draft, accent: "#64748b" },
+          { label: "Pending", value: bucketCounts.Pending, accent: "#f59e0b" },
+          { label: "Accepted", value: bucketCounts.Accepted, accent: "#10b981" },
+          { label: "Rejected", value: bucketCounts.Rejected, accent: "#f43f5e" },
         ].map((s) => (
-          <Card key={s.label}>
-            <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>{s.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: s.accent, marginTop: 4 }}>{s.value}</div>
+          <Card key={s.label} style={{ borderLeft: `3px solid ${s.accent}`, background: "linear-gradient(135deg, rgba(255,255,255,0.97), rgba(248,250,252,0.97))" }}>
+            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{s.label}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: s.accent, marginTop: 6, fontFamily: "'Montserrat', sans-serif" }}>{s.value}</div>
           </Card>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              padding: "8px 16px",
+              padding: "8px 18px",
               borderRadius: 999,
-              border: "2px solid",
-              borderColor: tab === t.key ? "#1a5fc4" : "transparent",
-              background: tab === t.key ? "rgba(26,95,196,0.08)" : "rgba(255,255,255,0.7)",
-              color: tab === t.key ? "#1a5fc4" : "#5a6578",
-              fontWeight: 700,
+              border: "1.5px solid",
+              borderColor: tab === t.key ? "#6366f1" : "#e2e8f0",
+              background: tab === t.key ? "linear-gradient(135deg, #eef2ff, #e0e7ff)" : "rgba(255,255,255,0.8)",
+              color: tab === t.key ? "#4f46e5" : "#64748b",
+              fontWeight: 600,
               fontSize: 13,
               cursor: "pointer",
-              transition: "all 0.2s",
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              fontFamily: "'Inter', sans-serif",
             }}
           >
             {t.label}
@@ -140,7 +141,7 @@ export default function UserDashboard() {
 
       {loading && <Loader text="Loading your loans..." />}
       {message && !loading && (
-        <Card style={{ marginBottom: 16, background: "rgba(26,95,196,0.06)", border: "1px solid rgba(26,95,196,0.35)", color: "#1a5fc4", fontWeight: 700 }}>
+        <Card style={{ marginBottom: 16, background: "linear-gradient(135deg, #eef2ff, #e0e7ff)", border: "1px solid #c7d2fe", color: "#4338ca", fontWeight: 600 }}>
           {message}
         </Card>
       )}
@@ -157,13 +158,13 @@ export default function UserDashboard() {
         />
       )}
       {!loading && !message && filteredLoans.length === 0 && loans.length > 0 && (
-        <div style={{ marginTop: 30, textAlign: "center", color: "#5a6578" }}>
+        <div style={{ marginTop: 30, textAlign: "center", color: "#64748b", fontWeight: 500 }}>
           No loans in the "{tab}" category.
         </div>
       )}
 
       {!loading && !message && filteredLoans.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
           {filteredLoans.map((loan) => {
             const st = getStatusStyle(loan.status);
             const tone = st.bg === "#d4edda" ? "success" : st.bg === "#f8d7da" ? "danger" : "warning";
@@ -172,29 +173,42 @@ export default function UserDashboard() {
             return (
               <Card
                 key={loan.loan_id}
-                style={{ cursor: "pointer", transition: "transform 0.2s" }}
+                style={{
+                  cursor: "pointer",
+                  transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                  borderTop: "2px solid transparent",
+                  borderImage: tone === "success" ? "linear-gradient(135deg, #10b981, #059669) 1" : tone === "danger" ? "linear-gradient(135deg, #f43f5e, #e11d48) 1" : "linear-gradient(135deg, #f59e0b, #d97706) 1",
+                }}
                 onClick={() => setExpandedCard(isExpanded ? null : loan.loan_id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-3px)";
+                  e.currentTarget.style.boxShadow = "0 12px 28px rgba(15,23,42,0.10)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(15,23,42,0.06)";
+                }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: "#1a5fc4" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <span style={{ fontSize: 17, fontWeight: 800, color: "#4f46e5", fontFamily: "'Montserrat', sans-serif" }}>
                     Loan #{displayIdMap.get(loan.loan_id)}
                   </span>
                   <Badge tone={tone}>{loan.status}</Badge>
                 </div>
 
-                <div style={{ fontSize: 13, color: "#2d3748", lineHeight: 1.7 }}>
-                  <div><strong>Amount:</strong> Rs {Number(loan.loan_amount).toLocaleString()}</div>
-                  <div><strong>Tenure:</strong> {loan.tenure} months</div>
+                <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.8 }}>
+                  <div><span style={{ color: "#64748b" }}>Amount:</span> <strong>Rs {Number(loan.loan_amount).toLocaleString()}</strong></div>
+                  <div><span style={{ color: "#64748b" }}>Tenure:</span> <strong>{loan.tenure} months</strong></div>
                   {isExpanded && (
-                    <>
-                      <div><strong>Interest:</strong> {loan.interest_rate}%</div>
-                      <div><strong>EMI:</strong> Rs {Number(loan.emi).toFixed(2)}</div>
-                      <div><strong>Applied:</strong> {loan.applied_date ? new Date(loan.applied_date).toLocaleDateString() : "N/A"}</div>
-                    </>
+                    <div style={{ animation: "slideUp 0.2s ease" }}>
+                      <div><span style={{ color: "#64748b" }}>Interest:</span> <strong>{loan.interest_rate}%</strong></div>
+                      <div><span style={{ color: "#64748b" }}>EMI:</span> <strong>Rs {Number(loan.emi).toFixed(2)}</strong></div>
+                      <div><span style={{ color: "#64748b" }}>Applied:</span> <strong>{loan.applied_date ? new Date(loan.applied_date).toLocaleDateString() : "N/A"}</strong></div>
+                    </div>
                   )}
                 </div>
 
-                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
                   {loan.status === "Draft" ? (
                     <Button
                       variant="primary"
@@ -212,7 +226,7 @@ export default function UserDashboard() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/user/loan/${loan.loan_id}`);
+                        navigate(`/user/loan/${loan.loan_id}`, { state: { displayId: displayIdMap.get(loan.loan_id) } });
                       }}
                     >
                       View Details
@@ -225,8 +239,8 @@ export default function UserDashboard() {
         </div>
       )}
 
-      <div style={{ marginTop: 18, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: 12, color: "#5a6578" }}>
+      <div style={{ marginTop: 24, borderTop: "1px solid rgba(15,23,42,0.06)", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
           {loans.length} total loan(s) for {userEmail}
         </div>
         <Button variant="ghost" size="sm" onClick={() => navigate("/documentation")}>
