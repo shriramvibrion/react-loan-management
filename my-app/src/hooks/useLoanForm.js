@@ -1,23 +1,38 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "../context/ToastContext";
-import { submitLoanApplication } from "../services/loanService";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   calculateEMI,
   getInterestRateByPurpose,
   getLoanSpecificDocs,
   getEmploymentSpecificDocs,
 } from "../utils/loanUtils";
+import { isValidEmail, isValidPhone, isValidPAN, isValidAadhaar, isValidPostalCode } from "../utils/validators";
 
 const DRAFT_KEY = "ezl_apply_draft";
 
-function saveDraft(data) {
-  try {
-    const serialized = { ...data };
-    delete serialized.files;
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(serialized));
-  } catch { /* ignore */ }
-}
+const INITIAL_FORM = {
+  full_name: "",
+  contact_email: "",
+  primary_mobile: "",
+  alternate_mobile: "",
+  dob: "",
+  address_line1: "",
+  address_line2: "",
+  city: "",
+  state: "",
+  postal_code: "",
+  pan_number: "",
+  aadhaar_number: "",
+  loan_amount: "",
+  tenure: "",
+  loan_purpose: "",
+  interest_rate: "",
+  emi: "",
+  employment_type: "",
+  monthly_income: "",
+  employer_name: "",
+  agreement: "",
+  notes: "",
+};
 
 function loadDraft() {
   try {
@@ -28,51 +43,44 @@ function loadDraft() {
   }
 }
 
-function clearDraft() {
-  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-}
-
-export function useLoanForm(userEmail) {
-  const navigate = useNavigate();
-  const toast = useToast();
-
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const [form, setForm] = useState(() => {
-    const draft = loadDraft();
-    return (
-      draft || {
-        full_name: "", contact_email: "", primary_mobile: "",
-        alternate_mobile: "", dob: "", address_line1: "",
-        address_line2: "", city: "", state: "", postal_code: "",
-        pan_number: "", aadhaar_number: "", loan_amount: "",
-        tenure: "", loan_purpose: "", interest_rate: "", emi: "",
-        employment_type: "", monthly_income: "", employer_name: "",
-        agreement: "", notes: "",
-      }
-    );
-  });
-
+/**
+ * Custom hook encapsulating all loan application form logic:
+ * form state, file state, auto-calculations, draft save/load, and validation.
+ */
+export default function useLoanForm() {
+  const [form, setForm] = useState(() => loadDraft() || INITIAL_FORM);
   const [files, setFiles] = useState({});
 
+  // Auto-save draft to localStorage
   useEffect(() => {
-    saveDraft(form);
+    try {
+      const serialized = { ...form };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(serialized));
+    } catch { /* ignore */ }
   }, [form]);
 
   const updateField = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // Auto-set interest rate when loan purpose changes
   useEffect(() => {
     if (form.loan_purpose) {
       const rate = getInterestRateByPurpose(form.loan_purpose);
       if (rate && rate !== form.interest_rate) {
-        updateField("interest_rate", rate);
+        setForm((prev) => ({ ...prev, interest_rate: rate }));
       }
     }
-  }, [form.loan_purpose, form.interest_rate, updateField]);
+  }, [form.loan_purpose, form.interest_rate]);
 
+  // Reset employment type if "Student" is selected but loan purpose is not Education Loan
+  useEffect(() => {
+    if (form.employment_type === "Student" && form.loan_purpose !== "Education Loan") {
+      setForm((prev) => ({ ...prev, employment_type: "" }));
+    }
+  }, [form.loan_purpose, form.employment_type]);
+
+  // Auto-calc EMI
   useEffect(() => {
     const amount = parseFloat(form.loan_amount);
     const rate = parseFloat(form.interest_rate);
@@ -80,94 +88,187 @@ export function useLoanForm(userEmail) {
     if (amount > 0 && rate > 0 && tenure > 0) {
       const emiVal = calculateEMI(amount, rate, tenure);
       if (emiVal && emiVal !== form.emi) {
-        updateField("emi", emiVal);
+        setForm((prev) => ({ ...prev, emi: emiVal }));
       }
     }
-  }, [form.loan_amount, form.interest_rate, form.tenure, form.emi, updateField]);
+  }, [form.loan_amount, form.interest_rate, form.tenure, form.emi]);
 
-  const handleFileChange = (docType, e) => {
+  const handleFileChange = useCallback((docType, e) => {
     if (e.target.files?.[0]) {
       setFiles((prev) => ({ ...prev, [docType]: e.target.files[0] }));
     }
-  };
+  }, []);
 
-  const handleSaveDraft = () => {
-    saveDraft(form);
-    toast.success("Draft saved successfully!");
-  };
+  const loanSpecificDocs = useMemo(
+    () => getLoanSpecificDocs(form.loan_purpose),
+    [form.loan_purpose]
+  );
 
-  const validateForm = () => {
+  const incomeDocs = useMemo(
+    () => getEmploymentSpecificDocs(form.employment_type),
+    [form.employment_type]
+  );
+
+  const saveDraft = useCallback(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
+    } catch { /* ignore */ }
+  }, [form]);
+
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch { /* ignore */ }
+  }, []);
+
+  const validate = useCallback(() => {
     const requiredFields = [
       "full_name", "contact_email", "primary_mobile", "dob",
-      "address_line1", "city", "state", "postal_code",
+      "address_line1", "address_line2", "city", "state", "postal_code",
       "loan_amount", "tenure", "loan_purpose", "employment_type",
-      "pan_number", "aadhaar_number", "monthly_income", "employer_name"
+      "pan_number", "aadhaar_number", "monthly_income", "employer_name",
+      "notes",
     ];
     for (const field of requiredFields) {
       if (!form[field]) {
-        toast.warning("Please fill in all mandatory fields before submitting.");
-        return false;
+        return { valid: false, message: "Please fill in all mandatory fields before submitting." };
       }
     }
+
+    if (!isValidEmail(form.contact_email)) {
+      return { valid: false, message: "Please enter a valid email address." };
+    }
+    if (!isValidPhone(form.primary_mobile)) {
+      return { valid: false, message: "Primary mobile must be a valid 10-digit Indian number." };
+    }
+    if (form.alternate_mobile && !isValidPhone(form.alternate_mobile)) {
+      return { valid: false, message: "Alternate mobile must be a valid 10-digit Indian number." };
+    }
+    if (!isValidPAN(form.pan_number)) {
+      return { valid: false, message: "PAN must be in format ABCDE1234F." };
+    }
+    if (!isValidAadhaar(form.aadhaar_number)) {
+      return { valid: false, message: "Aadhaar must be exactly 12 digits." };
+    }
+    if (!isValidPostalCode(form.postal_code)) {
+      return { valid: false, message: "Postal code must be exactly 6 digits." };
+    }
+
+    const amount = parseFloat(form.loan_amount);
+    const income = parseFloat(form.monthly_income);
+    if (isNaN(amount) || amount <= 0) {
+      return { valid: false, message: "Loan amount must be a positive number." };
+    }
+    if (isNaN(income) || income <= 0) {
+      return { valid: false, message: "Monthly income must be a positive number." };
+    }
+
     if (!files["pan_file"] || !files["aadhaar_file"]) {
-      toast.warning("Please upload PAN and Aadhaar files.");
-      return false;
+      return { valid: false, message: "Please upload PAN and Aadhaar files." };
     }
+
     if (form.agreement !== "accept") {
-      toast.warning("You must accept the terms and policies to proceed.");
-      return false;
+      return { valid: false, message: "You must accept the terms and policies to proceed." };
     }
-    return true;
-  };
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (submitting) return;
-    if (!validateForm()) return;
+    return { valid: true, message: "" };
+  }, [form, files]);
 
-    setSubmitting(true);
-    setMessage("");
-
-    try {
+  /**
+   * Build FormData for submission, mapping files correctly for the backend.
+   */
+  const buildFormData = useCallback(
+    (email, isDraft = false) => {
       const fd = new FormData();
-      fd.append("email", userEmail);
+      fd.append("email", email);
+      fd.append("submission_type", isDraft ? "draft" : "submit");
+      fd.append("agreement_decision", form.agreement === "accept" ? "accepted" : "denied");
 
-      Object.entries(form).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== "") {
-          fd.append(key, val);
+      // Append all text form fields
+      const textFields = [
+        "full_name", "contact_email", "primary_mobile", "alternate_mobile",
+        "dob", "address_line1", "address_line2", "city", "state", "postal_code",
+        "pan_number", "aadhaar_number", "loan_amount", "tenure", "loan_purpose",
+        "interest_rate", "emi", "employment_type", "monthly_income",
+        "employer_name", "notes",
+      ];
+      for (const key of textFields) {
+        if (form[key] !== undefined && form[key] !== null && form[key] !== "") {
+          fd.append(key, form[key]);
         }
-      });
+      }
 
-      Object.entries(files).forEach(([docType, file]) => {
-        fd.append("documents", file);
-        fd.append("document_types", docType);
-      });
+      // Core named document uploads
+      const coreFileKeys = [
+        "pan_file", "aadhaar_file", "income_tax_certificate",
+        "tax_document", "employment_proof",
+      ];
+      for (const key of coreFileKeys) {
+        if (files[key]) {
+          fd.append(key, files[key]);
+        }
+      }
 
-      const data = await submitLoanApplication(fd);
-      toast.success(data.message || "Loan application submitted!");
-      clearDraft();
-      navigate("/user/dashboard");
-    } catch (err) {
-      setMessage(err.message || "Submission failed.");
-      toast.error(err.message || "Submission failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      // Dynamic loan-specific and employment-specific documents
+      // Backend expects "document_types[]" and "document_files[]"
+      const dynamicDocLabels = [...loanSpecificDocs, ...incomeDocs.map((d) => `Income - ${d}`)];
+      for (const label of dynamicDocLabels) {
+        const file = files[label];
+        if (file) {
+          fd.append("document_types[]", label);
+          fd.append("document_files[]", file);
+        }
+      }
 
-  const loanSpecificDocs = getLoanSpecificDocs(form.loan_purpose);
-  const incomeDocs = getEmploymentSpecificDocs(form.employment_type);
+      return fd;
+    },
+    [form, files, loanSpecificDocs, incomeDocs]
+  );
+
+  /**
+   * Populate form from server-side loan data (e.g. resuming a draft).
+   */
+  const loadFromServer = useCallback((loan, applicant) => {
+    setForm({
+      full_name: applicant?.full_name || "",
+      contact_email: applicant?.contact_email || "",
+      primary_mobile: applicant?.primary_mobile || "",
+      alternate_mobile: applicant?.alternate_mobile || "",
+      dob: applicant?.dob || "",
+      address_line1: applicant?.address_line1 || "",
+      address_line2: applicant?.address_line2 || "",
+      city: applicant?.city || "",
+      state: applicant?.state || "",
+      postal_code: applicant?.postal_code || "",
+      pan_number: applicant?.pan_number || "",
+      aadhaar_number: applicant?.aadhaar_number || "",
+      loan_amount: loan?.loan_amount ? String(loan.loan_amount) : "",
+      tenure: loan?.tenure ? String(loan.tenure) : "",
+      loan_purpose: applicant?.loan_purpose || "",
+      interest_rate: loan?.interest_rate ? String(loan.interest_rate) : "",
+      emi: loan?.emi ? String(loan.emi) : "",
+      employment_type: applicant?.employment_type || "",
+      monthly_income: applicant?.monthly_income ? String(applicant.monthly_income) : "",
+      employer_name: applicant?.employer_name || "",
+      agreement: "",
+      notes: applicant?.notes || "",
+    });
+    // Clear file state — user must re-upload files for a draft
+    setFiles({});
+  }, []);
 
   return {
     form,
     files,
-    submitting,
-    message,
     updateField,
     handleFileChange,
-    handleSaveDraft,
-    handleSubmit,
     loanSpecificDocs,
-    incomeDocs
+    incomeDocs,
+    saveDraft,
+    clearDraft,
+    validate,
+    buildFormData,
+    loadFromServer,
+    setForm,
   };
 }

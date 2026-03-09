@@ -12,6 +12,14 @@ CREATE TABLE IF NOT EXISTS users (
     city VARCHAR(100)
 );
 
+-- Admin users
+CREATE TABLE IF NOT EXISTS admin (
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
+
 -- Loans
 CREATE TABLE IF NOT EXISTS loans (
     loan_id INT AUTO_INCREMENT PRIMARY KEY,

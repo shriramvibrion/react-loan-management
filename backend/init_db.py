@@ -5,17 +5,17 @@ Run: python init_db.py
 import mysql.connector
 import os
 
-# Same config as database.py
-DB_NAME = "reactloanmanagement"
+# Same config as database.py — use environment variables
+DB_NAME = os.getenv("DB_NAME", "reactloanmanagement")
 db_config = {
-    "host": "localhost",
-    "user": "root",
-    "password": "Shriram@123",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
 }
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS admin (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL

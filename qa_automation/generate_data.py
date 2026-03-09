@@ -11,8 +11,8 @@ def generate_users(count=50):
     print(f"Generating {count} users...")
     for i in range(count):
         user_data = {
-            "name": f"Test User {str(uuid.uuid4())[:6]}",
-            "email": f"user{str(uuid.uuid4())[:8]}@example.com",
+            "name": f"Test User {uuid.uuid4().hex[:6]}",
+            "email": f"user{uuid.uuid4().hex[:8]}@example.com",
             "password": "Password123!",
             "phone": f"98765{random.randint(10000, 99999)}",
             "city": random.choice(["Chennai", "Mumbai", "Delhi", "Bangalore"])
@@ -58,7 +58,7 @@ def generate_loans(users, count=100):
             "monthly_income": str(random.randint(20000, 200000)),
             "employer_name": "Test Company",
             "employment_type": random.choice(emp_types),
-            "interest_rate": f"{random.uniform(7.5, 15.0):.2f}",
+            "interest_rate": str(round(random.uniform(7.5, 15.0), 2)),
             "notes": "Automated Test Loan"
         }
         
@@ -90,12 +90,21 @@ def generate_loans(users, count=100):
         expected_loan = loan_docs.get(loan_data['loan_purpose'], [])
         expected_emp = emp_docs.get(loan_data['employment_type'], [])
         expected_combined = expected_loan + [f"Income - {d}" for d in expected_emp]
+        
+        # requests lib: multiple values for same key `document_types[]` and `document_files[]`
+        # Using a list of tuples
         multipart_data = []
+        for k, v in loan_data.items():
+            multipart_data.append((k, (None, v)))
+            
+        for k, v in files.items():
+            multipart_data.append((k, v))
+            
         for doc_name in expected_combined:
             multipart_data.append(("document_types[]", (None, doc_name)))
             multipart_data.append(("document_files[]", (f"{doc_name}.pdf", b"dummy content", "application/pdf")))
             
-        res = requests.post(f"{BASE_URL}/loan/apply", data=loan_data, files=multipart_data)
+        res = requests.post(f"{BASE_URL}/loan/apply", files=multipart_data)
         if res.status_code == 201:
             success += 1
         else:

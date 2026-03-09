@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 import { useToast } from "../context/ToastContext";
 import { registerAdmin } from "../services/authService";
+import { isValidEmail } from "../utils/validators";
 import PasswordInput from "../components/ui/PasswordInput";
 
 export default function AdminRegister() {
@@ -16,6 +17,21 @@ export default function AdminRegister() {
   const handleRegister = async () => {
     if (!form.username || !form.email || !form.password) {
       setError("All fields are required.");
+      return;
+    }
+
+    if (!isValidEmail(form.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+      setError("Password must contain at least one letter and one number.");
       return;
     }
 

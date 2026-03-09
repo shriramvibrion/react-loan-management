@@ -48,10 +48,12 @@ export default function UserLogin() {
           type="email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         />
         <PasswordInput
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         />
 
         {message && (

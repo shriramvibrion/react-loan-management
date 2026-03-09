@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import DashboardLayout from "../layouts/DashboardLayout";
+import { fetchAdminLoans } from "../services/loanService";
 import { getStatusStyle } from "../utils/loanUtils";
-import { useAnalytics } from "../hooks/useAnalytics";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
@@ -13,31 +13,98 @@ import EmptyState from "../components/ui/EmptyState";
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("container");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const {
-    loans,
-    loading,
-    message,
-    query,
-    setQuery,
-    statusFilter,
-    setStatusFilter,
-    displayIdMap,
-    filteredLoans,
-    countPending,
-    countApproved,
-    countRejected,
-  } = useAnalytics();
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const items = await fetchAdminLoans();
+        setLoans(items);
+        setMessage("");
+      } catch (err) {
+        setMessage(err.message || "Failed to load loans.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     navigate("/");
-  };
+  }, [logout, navigate]);
 
-  const handleLoanClick = (loanId) => {
-    navigate(`/admin/loan/${loanId}`);
-  };
+  const handleLoanClick = useCallback(
+    (loanId) => {
+      navigate(`/admin/loan/${loanId}`);
+    },
+    [navigate]
+  );
+
+  const normalizedLoans = useMemo(
+    () =>
+      loans.map((l) => ({
+        ...l,
+        _status: (l.status || "").toLowerCase(),
+        _who: `${l.user_name || ""} ${l.user_email || ""}`.trim(),
+      })),
+    [loans]
+  );
+
+  const displayIdMap = useMemo(() => {
+    const loansByCreationOrder = [...normalizedLoans].sort((a, b) => {
+      const aDate = a.applied_date ? new Date(a.applied_date).getTime() : 0;
+      const bDate = b.applied_date ? new Date(b.applied_date).getTime() : 0;
+      if (aDate !== bDate) return aDate - bDate;
+      return (a.loan_id || 0) - (b.loan_id || 0);
+    });
+    return new Map(loansByCreationOrder.map((loan, index) => [loan.loan_id, index + 1]));
+  }, [normalizedLoans]);
+
+  const filteredLoans = useMemo(
+    () =>
+      normalizedLoans.filter((l) => {
+        const statusMatches =
+          statusFilter === "all"
+            ? true
+            : statusFilter === "accepted"
+            ? l._status === "approved" || l._status === "accepted"
+            : l._status === statusFilter;
+
+        if (!statusMatches) return false;
+
+        if (!query.trim()) return true;
+        const q = query.trim().toLowerCase();
+        return (
+          String(l.loan_id).includes(q) ||
+          String(displayIdMap.get(l.loan_id) || "").includes(q) ||
+          String(l.user_email || "").toLowerCase().includes(q) ||
+          String(l.user_name || "").toLowerCase().includes(q) ||
+          String(l.status || "").toLowerCase().includes(q)
+        );
+      }),
+    [normalizedLoans, statusFilter, query, displayIdMap]
+  );
+
+  const countPending = useMemo(
+    () => normalizedLoans.filter((l) => l._status === "pending").length,
+    [normalizedLoans]
+  );
+  const countApproved = useMemo(
+    () => normalizedLoans.filter((l) => l._status === "approved" || l._status === "accepted").length,
+    [normalizedLoans]
+  );
+  const countRejected = useMemo(
+    () => normalizedLoans.filter((l) => l._status === "rejected").length,
+    [normalizedLoans]
+  );
 
   return (
     <DashboardLayout variant="orange">
@@ -149,7 +216,7 @@ export default function AdminDashboard() {
         }}
       >
         {[
-          { label: "Total", value: loans.length, accent: "#FF8A33" },
+          { label: "Total", value: normalizedLoans.length, accent: "#FF8A33" },
           { label: "Pending", value: countPending, accent: "#FF8A33" },
           { label: "Approved", value: countApproved, accent: "#16a34a" },
           { label: "Rejected", value: countRejected, accent: "#dc2626" },
@@ -320,7 +387,7 @@ export default function AdminDashboard() {
 
       {!loading &&
         !message &&
-        loans.length > 0 &&
+        normalizedLoans.length > 0 &&
         filteredLoans.length === 0 && (
           <div style={{ marginTop: 40, textAlign: "center", color: "#5a6578" }}>
             No results for "{query.trim()}".

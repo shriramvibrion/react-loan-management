@@ -1,4 +1,4 @@
-export default function DashboardLayout({ children, variant = "orange" }) {
+export default function DashboardLayout({ children, variant = "blue" }) {
   const isOrange = variant === "orange";
 
   const outerBackground = isOrange

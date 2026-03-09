@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 import { useToast } from "../context/ToastContext";
 import { registerUser } from "../services/authService";
+import { isValidEmail } from "../utils/validators";
 import PasswordInput from "../components/ui/PasswordInput";
 
 export default function UserRegister() {
@@ -23,6 +24,21 @@ export default function UserRegister() {
 
     if (!form.name || !form.email || !form.password || !form.phone || !form.city) {
       setMessage("Please fill in all fields.");
+      return;
+    }
+
+    if (!isValidEmail(form.email)) {
+      setMessage("Please enter a valid email address.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+      setMessage("Password must contain at least one letter and one number.");
       return;
     }
 

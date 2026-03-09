@@ -41,11 +41,9 @@ def simulate_user_session(email):
         loans = loans_res.json().get("loans", [])
     
     # 3. View specifics
-    if isinstance(loans, list):
-        for loan in loans[:3]:
-            if isinstance(loan, dict) and "loan_id" in loan:
-                fetch_loan_details(email, loan["loan_id"])
-                time.sleep(random.uniform(0.1, 0.5))  # simulate think time
+    for loan in loans[:3]:
+        fetch_loan_details(email, loan["loan_id"])
+        time.sleep(random.uniform(0.1, 0.5))  # simulate think time
 
     # Log metrics
     duration = time.time() - start_time
@@ -53,6 +51,7 @@ def simulate_user_session(email):
 
 def run_simulation():
     # Attempt to fetch all users from DB directly to get emails, or we can just spam register locally
+    # Since we can't easily fetch users without a backend route or db conn, let's connect to db directly
     import mysql.connector
     try:
         conn = mysql.connector.connect(
@@ -67,7 +66,7 @@ def run_simulation():
         conn.close()
     except Exception as e:
         print("Failed to get users directly:", e)
-        users = [f"user{random.randint(100,999)}@example.com" for _ in range(5)]
+        users = []
         
     print(f"Starting simulation with {len(users)} concurrent users.")
     threads = []

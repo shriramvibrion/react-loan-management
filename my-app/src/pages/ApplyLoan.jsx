@@ -1,24 +1,103 @@
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { useLoanForm } from "../hooks/useLoanForm";
-import { LOAN_PURPOSES, EMPLOYMENT_TYPES, TENURE_OPTIONS } from "../constants";
+import { useToast } from "../context/ToastContext";
+import { submitLoanApplication, fetchUserLoanDetail } from "../services/loanService";
+import {
+  LOAN_PURPOSES,
+  EMPLOYMENT_TYPES,
+  TENURE_OPTIONS,
+} from "../constants";
+import useLoanForm from "../hooks/useLoanForm";
 
 export default function ApplyLoan() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftLoanId = searchParams.get("draft");
   const { userEmail } = useAuth();
-  
+  const toast = useToast();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [message, setMessage] = useState("");
+
   const {
     form,
     files,
-    submitting,
-    message,
     updateField,
     handleFileChange,
-    handleSaveDraft,
-    handleSubmit,
     loanSpecificDocs,
-    incomeDocs
-  } = useLoanForm(userEmail);
+    incomeDocs,
+    clearDraft,
+    validate,
+    buildFormData,
+    loadFromServer,
+  } = useLoanForm();
+
+  // Load draft from server when ?draft=<loanId> is present
+  useEffect(() => {
+    if (!draftLoanId || !userEmail) return;
+    let cancelled = false;
+    const loadDraft = async () => {
+      try {
+        const data = await fetchUserLoanDetail(draftLoanId, userEmail);
+        if (!cancelled && data.loan?.status === "Draft") {
+          loadFromServer(data.loan, data.applicant);
+          toast.info("Draft loaded — continue your application.");
+        }
+      } catch {
+        // Draft not found or access denied — start fresh
+      }
+    };
+    loadDraft();
+    return () => { cancelled = true; };
+  }, [draftLoanId, userEmail, loadFromServer, toast]);
+
+  const handleSaveDraft = async () => {
+    if (savingDraft) return;
+    setSavingDraft(true);
+    setMessage("");
+    try {
+      const fd = buildFormData(userEmail, true);
+      const data = await submitLoanApplication(fd);
+      clearDraft();
+      toast.success(data.message || "Draft saved!");
+      navigate("/user/dashboard");
+    } catch (err) {
+      setMessage(err.message || "Failed to save draft.");
+      toast.error(err.message || "Failed to save draft.");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    const { valid, message: validationMsg } = validate();
+    if (!valid) {
+      toast.warning(validationMsg);
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage("");
+
+    try {
+      const fd = buildFormData(userEmail);
+
+      const data = await submitLoanApplication(fd);
+      toast.success(data.message || "Loan application submitted!");
+      clearDraft();
+      navigate("/user/dashboard");
+    } catch (err) {
+      setMessage(err.message || "Submission failed.");
+      toast.error(err.message || "Submission failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const labelStyle = { fontSize: 13, fontWeight: 700, color: "#2d3748", marginBottom: 6, display: "block" };
   const inputStyle = {
@@ -233,7 +312,7 @@ export default function ApplyLoan() {
                 <select style={inputStyle} value={form.employment_type} onChange={(e) => updateField("employment_type", e.target.value)} required>
                   <option value="">Select</option>
                   {EMPLOYMENT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t} disabled={t === "Student" && form.loan_purpose !== "Education Loan"}>{t}</option>
                   ))}
                 </select>
               </div>
@@ -246,15 +325,25 @@ export default function ApplyLoan() {
                 </div>
               ))}
 
-              {loanSpecificDocs.map((docType) => (
-                <div key={docType}>
-                  <label style={labelStyle}>{docType} {requiredStar}</label>
-                  <input type="file" required style={{...inputStyle, padding: "7px 10px"}} onChange={(e) => handleFileChange(docType, e)} />
-                  {files[docType] && <div style={{ marginTop: 4, fontSize: 12, color: "#16a34a" }}>✓ {files[docType].name}</div>}
-                </div>
-              ))}
             </div>
           </div>
+
+          {/* Loan-Specific Documents */}
+          {loanSpecificDocs.length > 0 && (
+            <div style={sectionCardStyle}>
+              <h2 style={sectionTitleStyle}>Additional Documents — {form.loan_purpose}</h2>
+              <p style={sectionSubtitleStyle}>These documents are required specifically for a {form.loan_purpose} application.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+                {loanSpecificDocs.map((docType) => (
+                  <div key={docType}>
+                    <label style={labelStyle}>{docType} {requiredStar}</label>
+                    <input type="file" required style={{...inputStyle, padding: "7px 10px"}} onChange={(e) => handleFileChange(docType, e)} />
+                    {files[docType] && <div style={{ marginTop: 4, fontSize: 12, color: "#16a34a" }}>✓ {files[docType].name}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Agreement Confirmation */}
           <div style={sectionCardStyle}>

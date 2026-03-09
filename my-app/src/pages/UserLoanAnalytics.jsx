@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -7,6 +7,9 @@ import { normalizeLoan, enrichLoanAnalytics } from "../utils/loanUtils";
 import Loader from "../components/ui/Loader";
 import EmptyState from "../components/ui/EmptyState";
 import Button from "../components/ui/Button";
+import StatCard from "../components/ui/StatCard";
+import ProgressBar from "../components/ui/ProgressBar";
+import Section from "../components/ui/Section";
 
 export default function UserLoanAnalytics() {
   const navigate = useNavigate();
@@ -32,10 +35,10 @@ export default function UserLoanAnalytics() {
     load();
   }, [userEmail]);
 
-  const accepted = loans.filter((l) => l.bucket === "Accepted");
-  const totalAmount = accepted.reduce((s, l) => s + l.amount, 0);
-  const totalPaid = accepted.reduce((s, l) => s + l.amountPaid, 0);
-  const totalRemaining = accepted.reduce((s, l) => s + l.amountRemaining, 0);
+  const accepted = useMemo(() => loans.filter((l) => l.bucket === "Accepted"), [loans]);
+  const totalAmount = useMemo(() => accepted.reduce((s, l) => s + l.amount, 0), [accepted]);
+  const totalPaid = useMemo(() => accepted.reduce((s, l) => s + l.amountPaid, 0), [accepted]);
+  const totalRemaining = useMemo(() => accepted.reduce((s, l) => s + l.amountRemaining, 0), [accepted]);
   const overallPaidPercent = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
 
   return (
@@ -66,31 +69,18 @@ export default function UserLoanAnalytics() {
       {!loading && !message && accepted.length > 0 && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
-            {[
-              { label: "Accepted Loans", value: accepted.length, accent: "#1a5fc4" },
-              { label: "Total Borrowed", value: `Rs ${totalAmount.toLocaleString()}`, accent: "#1a5fc4" },
-              { label: "Total Paid", value: `Rs ${Math.round(totalPaid).toLocaleString()}`, accent: "#16a34a" },
-              { label: "Remaining", value: `Rs ${Math.round(totalRemaining).toLocaleString()}`, accent: "#dc2626" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "rgba(255,255,255,0.96)", borderRadius: 14, padding: "12px 14px", border: "1px solid rgba(15,23,42,0.06)", boxShadow: "0 4px 16px rgba(15,23,42,0.08)" }}>
-                <div style={{ fontSize: 12, color: "#5a6578", fontWeight: 800 }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: s.accent, marginTop: 4 }}>{s.value}</div>
-              </div>
-            ))}
+            <StatCard label="Accepted Loans" value={accepted.length} />
+            <StatCard label="Total Borrowed" value={`Rs ${totalAmount.toLocaleString()}`} />
+            <StatCard label="Total Paid" value={`Rs ${Math.round(totalPaid).toLocaleString()}`} accent="#16a34a" />
+            <StatCard label="Remaining" value={`Rs ${Math.round(totalRemaining).toLocaleString()}`} accent="#dc2626" />
           </div>
 
-          <div style={{ marginBottom: 16, background: "#fff", borderRadius: 14, padding: 16, border: "1px solid rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a5fc4", marginBottom: 10 }}>Overall Repayment Progress</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-              <div style={{ flex: 1, height: 14, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-                <div style={{ width: `${overallPaidPercent}%`, height: "100%", background: "#16a34a", transition: "width 0.5s" }} />
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#16a34a" }}>{overallPaidPercent}%</span>
-            </div>
-            <div style={{ fontSize: 13, color: "#5a6578" }}>
+          <Section title="Overall Repayment Progress">
+            <ProgressBar percent={overallPaidPercent} color="#16a34a" height={14} />
+            <div style={{ fontSize: 13, color: "#5a6578", marginTop: 6 }}>
               Paid Rs {Math.round(totalPaid).toLocaleString()} of Rs {totalAmount.toLocaleString()}
             </div>
-          </div>
+          </Section>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {accepted.map((loan) => (
@@ -123,26 +113,14 @@ export default function UserLoanAnalytics() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 6 }}>Amount Progress</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ flex: 1, height: 10, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-                        <div style={{ width: `${loan.paidPercent}%`, height: "100%", background: "#16a34a" }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 700 }}>{loan.paidPercent}%</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#5a6578" }}>
+                    <ProgressBar percent={loan.paidPercent} color="#16a34a" height={10} label="Amount Progress" />
+                    <div style={{ fontSize: 12, color: "#5a6578", marginTop: 4 }}>
                       Paid: Rs {Math.round(loan.amountPaid).toLocaleString()} | Remaining: Rs {Math.round(loan.amountRemaining).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 6 }}>Tenure Progress</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ flex: 1, height: 10, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-                        <div style={{ width: `${loan.monthCompletedPercent}%`, height: "100%", background: "#2563eb" }} />
-                      </div>
-                      <span style={{ fontSize: 12, fontWeight: 700 }}>{loan.monthCompletedPercent}%</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#5a6578" }}>
+                    <ProgressBar percent={loan.monthCompletedPercent} color="#2563eb" height={10} label="Tenure Progress" />
+                    <div style={{ fontSize: 12, color: "#5a6578", marginTop: 4 }}>
                       {loan.monthsCompleted} of {loan.tenure} months completed
                     </div>
                   </div>

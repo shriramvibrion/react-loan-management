@@ -11,44 +11,22 @@ async function apiRequest(endpoint, options = {}) {
     defaultHeaders["Content-Type"] = "application/json";
   }
 
-  const MAX_RETRIES = 3;
-  let attempt = 0;
-  
-  while (attempt < MAX_RETRIES) {
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-      });
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
 
-      const data = await response.json().catch(() => ({})); // Handle cases where body isn't JSON
+  const data = await response.json();
 
-      if (!response.ok) {
-        // If it's a 500 or timeout, we might want to retry
-        if (response.status >= 500 && attempt < MAX_RETRIES - 1) {
-          console.warn(`API Error ${response.status}. Retrying in 1s...`);
-          await new Promise(res => setTimeout(res, 1000));
-          attempt++;
-          continue;
-        }
-        const message = data.error || data.message || `Request failed (${response.status})`;
-        throw new Error(message);
-      }
-
-      return data;
-    } catch (error) {
-      if (attempt < MAX_RETRIES - 1) {
-        console.warn(`Network/Fetch Error: ${error.message}. Retrying in 1s...`);
-        await new Promise(res => setTimeout(res, 1000));
-        attempt++;
-      } else {
-        throw error;
-      }
-    }
+  if (!response.ok) {
+    const message = data.error || data.message || `Request failed (${response.status})`;
+    throw new Error(message);
   }
+
+  return data;
 }
 
 export const api = {

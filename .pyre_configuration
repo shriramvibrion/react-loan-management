@@ -1,0 +1,14 @@
+{
+  "source_directories": [
+    "backend",
+    "qa_automation"
+  ],
+  "search_path": [
+    "backend",
+    ".venv/Lib/site-packages"
+  ],
+  "ignore_all_errors": [
+    "qa_automation"
+  ],
+  "python_version": "3.12"
+}

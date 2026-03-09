@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { getStatusStyle } from "../utils/loanUtils";
-import { useDashboardData } from "../hooks/useDashboardData";
+import { fetchUserLoans } from "../services/loanService";
+import { normalizeLoan, getStatusStyle } from "../utils/loanUtils";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
@@ -13,16 +13,44 @@ import EmptyState from "../components/ui/EmptyState";
 export default function UserDashboard() {
   const navigate = useNavigate();
   const { userEmail, logout } = useAuth();
-  
-  const { loans, loading, message, bucketCounts, displayIdMap } = useDashboardData(userEmail);
-
+  const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
   const [tab, setTab] = useState("all");
   const [expandedCard, setExpandedCard] = useState(null);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (!userEmail) return;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const items = await fetchUserLoans(userEmail);
+        setLoans(items.map(normalizeLoan));
+      } catch (err) {
+        setMessage(err.message || "Failed to load loans.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [userEmail]);
+
+  const handleLogout = useCallback(() => {
     logout();
     navigate("/");
-  };
+  }, [logout, navigate]);
+
+  const bucketCounts = useMemo(
+    () =>
+      loans.reduce(
+        (acc, l) => {
+          acc[l.bucket] = (acc[l.bucket] || 0) + 1;
+          return acc;
+        },
+        { Draft: 0, Pending: 0, Accepted: 0, Rejected: 0 }
+      ),
+    [loans]
+  );
 
   const tabs = [
     { key: "all", label: "All" },
@@ -32,7 +60,20 @@ export default function UserDashboard() {
     { key: "Rejected", label: "Rejected" },
   ];
 
-  const filteredLoans = tab === "all" ? loans : loans.filter((l) => l.bucket === tab);
+  const filteredLoans = useMemo(
+    () => (tab === "all" ? loans : loans.filter((l) => l.bucket === tab)),
+    [loans, tab]
+  );
+
+  const displayIdMap = useMemo(() => {
+    const loansByCreationOrder = [...loans].sort((a, b) => {
+      const aDate = a.applied_date ? new Date(a.applied_date).getTime() : 0;
+      const bDate = b.applied_date ? new Date(b.applied_date).getTime() : 0;
+      if (aDate !== bDate) return aDate - bDate;
+      return (a.loan_id || 0) - (b.loan_id || 0);
+    });
+    return new Map(loansByCreationOrder.map((loan, idx) => [loan.loan_id, idx + 1]));
+  }, [loans]);
 
   return (
     <DashboardLayout>
@@ -154,16 +195,29 @@ export default function UserDashboard() {
                 </div>
 
                 <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/user/loan/${loan.loan_id}`);
-                    }}
-                  >
-                    View Details
-                  </Button>
+                  {loan.status === "Draft" ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/user/apply?draft=${loan.loan_id}`);
+                      }}
+                    >
+                      Continue Application
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/user/loan/${loan.loan_id}`);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  )}
                 </div>
               </Card>
             );

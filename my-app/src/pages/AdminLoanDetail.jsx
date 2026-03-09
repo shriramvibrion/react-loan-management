@@ -7,50 +7,12 @@ import {
 } from "../services/loanService";
 import { monthDiff } from "../utils/loanUtils";
 import Loader from "../components/ui/Loader";
+import Section from "../components/ui/Section";
+import InfoRow from "../components/ui/InfoRow";
+import ProgressBar from "../components/ui/ProgressBar";
+import Modal from "../components/ui/Modal";
+import Button from "../components/ui/Button";
 import { useToast } from "../context/ToastContext";
-
-function Section({ title, children }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        padding: 18,
-        marginBottom: 16,
-        border: "1px solid rgba(0,0,0,0.06)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 16,
-          fontWeight: 700,
-          color: "#FF8A33",
-          marginBottom: 12,
-        }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 12,
-        marginBottom: 8,
-        fontSize: 14,
-      }}
-    >
-      <span style={{ color: "#5a6578", minWidth: 140 }}>{label}:</span>
-      <span style={{ color: "#2d3748" }}>{value ?? "-"}</span>
-    </div>
-  );
-}
 
 export default function AdminLoanDetail() {
   const navigate = useNavigate();
@@ -60,6 +22,7 @@ export default function AdminLoanDetail() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const onBack = () => navigate("/admin/dashboard");
 
@@ -292,7 +255,7 @@ export default function AdminLoanDetail() {
           }}
         >
           <div>
-            <Section title="Loan Details">
+            <Section title="Loan Details" variant="orange">
               <InfoRow label="Loan Amount" value={`Rs ${amount.toLocaleString()}`} />
               <InfoRow label="Tenure" value={`${loan?.tenure} months`} />
               <InfoRow label="Interest Rate" value={`${loan?.interest_rate}%`} />
@@ -305,7 +268,7 @@ export default function AdminLoanDetail() {
             </Section>
 
             {applicant && (
-              <Section title="Applicant Details">
+              <Section title="Applicant Details" variant="orange">
                 <InfoRow label="Full Name" value={applicant.full_name} />
                 <InfoRow label="Contact Email" value={applicant.contact_email} />
                 <InfoRow label="Primary Mobile" value={applicant.primary_mobile} />
@@ -333,7 +296,7 @@ export default function AdminLoanDetail() {
               </Section>
             )}
 
-            <Section title="Uploaded Documents">
+            <Section title="Uploaded Documents" variant="orange">
               {documents?.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {documents.map((doc) => (
@@ -381,39 +344,63 @@ export default function AdminLoanDetail() {
             </Section>
 
             {isPending && (
-              <Section title="Decision">
+              <Section title="Decision" variant="orange">
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <button
-                    className="btn-orange"
+                  <Button
+                    variant="primary"
+                    onClick={() => setConfirmAction("Approved")}
+                    disabled={actionLoading}
                     style={{
-                      width: "auto",
-                      padding: "12px 24px",
                       background: "linear-gradient(135deg, #16a34a, #15803d)",
-                      marginTop: 0,
                       boxShadow: "0 10px 22px rgba(22,163,74,0.18)",
                     }}
-                    onClick={() => handleStatusUpdate("Approved")}
-                    disabled={actionLoading}
                   >
                     {actionLoading ? "Processing..." : "Accept"}
-                  </button>
-                  <button
-                    className="btn-orange"
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => setConfirmAction("Rejected")}
+                    disabled={actionLoading}
                     style={{
-                      width: "auto",
-                      padding: "12px 24px",
-                      marginTop: 0,
                       background: "linear-gradient(135deg, #ef4444, #dc2626)",
                       boxShadow: "0 10px 22px rgba(239,68,68,0.18)",
                     }}
-                    onClick={() => handleStatusUpdate("Rejected")}
-                    disabled={actionLoading}
                   >
                     {actionLoading ? "Processing..." : "Reject"}
-                  </button>
+                  </Button>
                 </div>
               </Section>
             )}
+
+            <Modal
+              open={!!confirmAction}
+              title={`Confirm ${confirmAction === "Approved" ? "Approval" : "Rejection"}`}
+              onClose={() => setConfirmAction(null)}
+            >
+              <p style={{ color: "#475569", marginBottom: 20 }}>
+                Are you sure you want to {confirmAction === "Approved" ? "approve" : "reject"} Loan #{loan?.loan_id}?
+                This action cannot be undone.
+              </p>
+              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                <Button variant="secondary" onClick={() => setConfirmAction(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleStatusUpdate(confirmAction);
+                    setConfirmAction(null);
+                  }}
+                  style={{
+                    background: confirmAction === "Approved"
+                      ? "linear-gradient(135deg, #16a34a, #15803d)"
+                      : "linear-gradient(135deg, #ef4444, #dc2626)",
+                  }}
+                >
+                  {confirmAction === "Approved" ? "Approve" : "Reject"}
+                </Button>
+              </div>
+            </Modal>
 
             {!isPending && (
               <div style={{ marginTop: 16, color: "#5a6578", fontSize: 14 }}>

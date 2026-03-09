@@ -80,7 +80,7 @@ class ApiTests(unittest.TestCase):
         with p:
             res = self.client.post(
                 "/api/admin/register",
-                json={"username": "Admin", "email": "admin@test.com", "password": "pass123"},
+                json={"username": "Admin", "email": "admin@test.com", "password": "Admin1234"},
             )
 
         self.assertEqual(res.status_code, 201)
@@ -119,7 +119,7 @@ class ApiTests(unittest.TestCase):
                 json={
                     "name": "User",
                     "email": "user@test.com",
-                    "password": "pass",
+                    "password": "Secure1234",
                     "phone": "9999999999",
                     "city": "Chennai",
                 },
@@ -127,6 +127,42 @@ class ApiTests(unittest.TestCase):
 
         self.assertEqual(res.status_code, 201)
         self.assertTrue(conn.committed)
+
+    def test_user_register_short_password(self):
+        res = self.client.post(
+            "/api/user/register",
+            json={
+                "name": "User",
+                "email": "user@test.com",
+                "password": "abc",
+                "phone": "9999999999",
+                "city": "Chennai",
+            },
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("8 characters", res.get_json()["error"])
+
+    def test_user_register_password_no_digit(self):
+        res = self.client.post(
+            "/api/user/register",
+            json={
+                "name": "User",
+                "email": "user@test.com",
+                "password": "abcdefgh",
+                "phone": "9999999999",
+                "city": "Chennai",
+            },
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("letter and one number", res.get_json()["error"])
+
+    def test_admin_register_short_password(self):
+        res = self.client.post(
+            "/api/admin/register",
+            json={"username": "Admin", "email": "admin@test.com", "password": "short1"},
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("8 characters", res.get_json()["error"])
 
     def test_user_login_success(self):
         import bcrypt
@@ -152,7 +188,7 @@ class ApiTests(unittest.TestCase):
                 "tenure": "12",
                 "full_name": "User",
                 "contact_email": "user@test.com",
-                "primary_mobile": "99999",
+                "primary_mobile": "9999999999",
                 "pan_number": "ABCDE1234F",
                 "aadhaar_number": "123412341234",
                 "loan_purpose": "Home Loan",
@@ -175,7 +211,7 @@ class ApiTests(unittest.TestCase):
                     "interest_rate": "10",
                     "full_name": "User",
                     "contact_email": "user@test.com",
-                    "primary_mobile": "99999",
+                    "primary_mobile": "9999999999",
                     "dob": "1995-01-01",
                     "address_line1": "A1",
                     "address_line2": "A2",
@@ -289,12 +325,85 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_admin_update_status_not_found(self):
-        cursor = FakeCursor(rowcount=0)
+        cursor = FakeCursor(fetchone_results=[None])
         p, _ = self._patch_connection("loanRoutes.get_connection", cursor)
         with p:
             res = self.client.patch("/api/admin/loans/999/status", json={"status": "approved"})
 
         self.assertEqual(res.status_code, 404)
+
+    def test_admin_update_status_wrong_current(self):
+        """Cannot approve/reject a Draft or already Approved loan."""
+        cursor = FakeCursor(fetchone_results=[("Draft",)])
+        p, _ = self._patch_connection("loanRoutes.get_connection", cursor)
+        with p:
+            res = self.client.patch("/api/admin/loans/1/status", json={"status": "approved"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("Cannot change", res.get_json()["error"])
+
+    def test_apply_loan_invalid_pan(self):
+        """Backend rejects malformed PAN."""
+        res = self.client.post(
+            "/api/loan/apply",
+            data={
+                "email": "user@test.com",
+                "agreement_decision": "accepted",
+                "loan_amount": "100000",
+                "tenure": "12",
+                "interest_rate": "10",
+                "full_name": "User",
+                "contact_email": "user@test.com",
+                "primary_mobile": "9999999999",
+                "dob": "1995-01-01",
+                "address_line1": "A1",
+                "address_line2": "A2",
+                "city": "Chennai",
+                "state": "TN",
+                "postal_code": "600001",
+                "pan_number": "INVALID",
+                "aadhaar_number": "123412341234",
+                "monthly_income": "50000",
+                "employer_name": "Org",
+                "employment_type": "Other",
+                "loan_purpose": "Other",
+                "notes": "test",
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("PAN", res.get_json()["error"])
+
+    def test_apply_loan_invalid_phone(self):
+        """Backend rejects invalid mobile number."""
+        res = self.client.post(
+            "/api/loan/apply",
+            data={
+                "email": "user@test.com",
+                "agreement_decision": "accepted",
+                "loan_amount": "100000",
+                "tenure": "12",
+                "interest_rate": "10",
+                "full_name": "User",
+                "contact_email": "user@test.com",
+                "primary_mobile": "1234",
+                "dob": "1995-01-01",
+                "address_line1": "A1",
+                "address_line2": "A2",
+                "city": "Chennai",
+                "state": "TN",
+                "postal_code": "600001",
+                "pan_number": "ABCDE1234F",
+                "aadhaar_number": "123412341234",
+                "monthly_income": "50000",
+                "employer_name": "Org",
+                "employment_type": "Other",
+                "loan_purpose": "Other",
+                "notes": "test",
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("mobile", res.get_json()["error"].lower())
 
 
 if __name__ == "__main__":

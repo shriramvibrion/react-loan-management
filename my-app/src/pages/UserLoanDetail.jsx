@@ -4,35 +4,8 @@ import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { fetchUserLoanDetail, updateUserLoanContact, API_BASE_URL } from "../services/loanService";
 import Loader from "../components/ui/Loader";
-
-function Section({ title, children }) {
-  return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        padding: 18,
-        marginBottom: 16,
-        border: "1px solid rgba(0,0,0,0.06)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-      }}
-    >
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#1a5fc4", marginBottom: 12 }}>
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div style={{ display: "flex", gap: 12, marginBottom: 8, fontSize: 14 }}>
-      <span style={{ color: "#5a6578", minWidth: 140 }}>{label}:</span>
-      <span style={{ color: "#2d3748" }}>{value ?? "-"}</span>
-    </div>
-  );
-}
+import Section from "../components/ui/Section";
+import InfoRow from "../components/ui/InfoRow";
 
 export default function UserLoanDetail() {
   const navigate = useNavigate();
@@ -122,7 +95,7 @@ export default function UserLoanDetail() {
 
   const { loan, applicant, documents } = data || {};
   const status = (loan?.status || "").toLowerCase();
-  const docViewUrl = (docId) => `${API_BASE_URL}/api/user/document/${docId}`;
+  const docViewUrl = (docId) => `${API_BASE_URL}/api/user/document/${docId}?email=${encodeURIComponent(userEmail || "")}`;
 
   return (
     <div

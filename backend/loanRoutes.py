@@ -1,15 +1,21 @@
 from flask import Blueprint, jsonify, request, send_file
 import logging
 import os
+import re
 from uuid import uuid4
 
 import mysql.connector
+from markupsafe import escape
 from werkzeug.utils import secure_filename
 
 from database import get_connection
 
 loan_bp = Blueprint("loan", __name__)
 logger = logging.getLogger(__name__)
+
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
+MAX_FILE_SIZE_MB = 10
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
 LOAN_PURPOSE_DOCS = {
     "Home Loan": ["Land Document", "Approved Building Plan", "Property Registration"],
@@ -68,22 +74,15 @@ def apply_loan():
     if submission_type not in ("submit", "draft"):
         submission_type = "submit"
 
-    # Drafts are client-local only; backend accepts final submit only.
-    if submission_type == "draft":
-        return jsonify({"error": "Drafts are saved locally and are not submitted to server."}), 400
-
-    if agreement_decision not in ("accepted", "denied"):
-        return jsonify({"error": "Please select agreement decision (Accepted or Denied)."}), 400
+    is_draft = submission_type == "draft"
 
     if not email:
-        return (
-            jsonify({"error": "Email is required."}),
-            400,
-        )
-
-    is_draft = False
+        return jsonify({"error": "Email is required."}), 400
 
     if not is_draft:
+        if agreement_decision not in ("accepted", "denied"):
+            return jsonify({"error": "Please select agreement decision (Accepted or Denied)."}), 400
+
         if agreement_decision != "accepted":
             return jsonify({"error": "You must accept the agreement to submit the loan application."}), 400
 
@@ -120,6 +119,18 @@ def apply_loan():
                 ),
                 400,
             )
+
+        # Format validation for sensitive fields
+        if not re.match(r"^[A-Z]{5}[0-9]{4}[A-Z]$", pan_number):
+            return jsonify({"error": "PAN must be in format ABCDE1234F."}), 400
+        if not re.match(r"^\d{12}$", aadhaar_number):
+            return jsonify({"error": "Aadhaar must be exactly 12 digits."}), 400
+        if not re.match(r"^[6-9]\d{9}$", primary_mobile):
+            return jsonify({"error": "Primary mobile must be a valid 10-digit Indian number."}), 400
+        if alternate_mobile and not re.match(r"^[6-9]\d{9}$", alternate_mobile):
+            return jsonify({"error": "Alternate mobile must be a valid 10-digit number."}), 400
+        if not re.match(r"^\d{6}$", postal_code):
+            return jsonify({"error": "Postal code must be exactly 6 digits."}), 400
 
         try:
             loan_amount = float(loan_amount_raw)
@@ -178,6 +189,16 @@ def apply_loan():
         if missing_dynamic:
             return jsonify({"error": "Please upload all mandatory loan and employment documents."}), 400
     else:
+        # Draft path — relax validation, parse whatever is available
+        try:
+            loan_amount = float(loan_amount_raw) if loan_amount_raw else 0
+        except ValueError:
+            loan_amount = 0
+        try:
+            tenure = int(tenure_raw) if tenure_raw else 0
+        except ValueError:
+            tenure = 0
+
         monthly_income = None
         if monthly_income_raw:
             try:
@@ -191,27 +212,36 @@ def apply_loan():
         except ValueError:
             interest_rate = 10.0
 
-    monthly_rate = interest_rate / 12 / 100.0
+    # Compute EMI (skip if missing data)
+    emi = 0
+    if loan_amount > 0 and tenure > 0 and interest_rate > 0:
+        monthly_rate = interest_rate / 12 / 100.0
+        if monthly_rate == 0:
+            emi = loan_amount / tenure
+        else:
+            try:
+                if tenure > 1200:
+                    return jsonify({"error": "Tenure exceeds maximum allowable value (1200 months)."}), 400
+                if interest_rate > 100:
+                    return jsonify({"error": "Interest rate cannot exceed 100%."}), 400
+                emi = loan_amount * monthly_rate * ((1 + monthly_rate) ** tenure) / (
+                    (1 + monthly_rate) ** tenure - 1
+                )
+            except OverflowError:
+                return jsonify({"error": "Interest calculation resulted in a math overflow. Please verify tenure and interest rate inputs."}), 400
 
-    if monthly_rate == 0:
-        emi = loan_amount / tenure
-    else:
-        try:
-            if tenure > 1200:
-                from flask import jsonify
-                return jsonify({"error": "Tenure exceeds maximum allowable value (1200 months)."}), 400
-            if interest_rate > 100:
-                from flask import jsonify
-                return jsonify({"error": "Interest rate cannot exceed 100%."}), 400
-            emi = loan_amount * monthly_rate * ((1 + monthly_rate) ** tenure) / (
-                (1 + monthly_rate) ** tenure - 1
-            )
-        except OverflowError:
-            from flask import jsonify
-            return jsonify({"error": "Interest calculation resulted in a math overflow. Please verify tenure and interest rate inputs."}), 400
+    status_label = "Draft" if is_draft else "Pending"
 
-    agreement_prefix = f"[Agreement: {agreement_decision.capitalize()}]"
-    notes = f"{agreement_prefix} {notes}".strip() if notes else agreement_prefix
+    # Sanitize free-text fields to prevent stored XSS
+    full_name = str(escape(full_name)) if full_name else full_name
+    notes = str(escape(notes)) if notes else notes
+    address_line1 = str(escape(address_line1)) if address_line1 else address_line1
+    address_line2 = str(escape(address_line2)) if address_line2 else address_line2
+    employer_name = str(escape(employer_name)) if employer_name else employer_name
+
+    if not is_draft:
+        agreement_prefix = f"[Agreement: {agreement_decision.capitalize()}]"
+        notes = f"{agreement_prefix} {notes}".strip() if notes else agreement_prefix
 
     conn = None
     cursor = None
@@ -231,7 +261,7 @@ def apply_loan():
 
         user_id = user_row[0]
 
-        # Once user submits a final application, older server drafts (legacy) should not reload.
+        # Once user submits a final application, older server drafts should not reload.
         cursor.execute(
             "UPDATE loans SET status = 'Archived' WHERE user_id = %s AND status = 'Draft'",
             (user_id,),
@@ -242,7 +272,7 @@ def apply_loan():
             INSERT INTO loans (user_id, loan_amount, tenure, interest_rate, emi, status)
             VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (user_id, loan_amount, tenure, interest_rate, emi, "Pending"),
+            (user_id, loan_amount, tenure, interest_rate, emi, status_label),
         )
         loan_id = cursor.lastrowid
 
@@ -304,6 +334,18 @@ def apply_loan():
                 return
 
             original_filename = file_obj.filename
+            # Validate file extension
+            ext = os.path.splitext(original_filename)[1].lower()
+            if ext not in ALLOWED_EXTENSIONS:
+                raise ValueError(f"File type '{ext}' not allowed for '{document_type_label}'. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}")
+
+            # Validate file size
+            file_obj.seek(0, 2)
+            size = file_obj.tell()
+            file_obj.seek(0)
+            if size > MAX_FILE_SIZE_BYTES:
+                raise ValueError(f"File '{original_filename}' exceeds {MAX_FILE_SIZE_MB}MB limit.")
+
             safe_name = secure_filename(original_filename) or "file"
             unique_prefix = uuid4().hex
             stored_filename = f"{unique_prefix}_{safe_name}"
@@ -379,20 +421,25 @@ def apply_loan():
         return (
             jsonify(
                 {
-                    "message": "Loan application submitted.",
-                    "status": "Pending",
+                    "message": "Draft saved." if is_draft else "Loan application submitted.",
+                    "status": status_label,
                     "loan": {
                         "loan_id": loan_id,
                         "loan_amount": loan_amount,
                         "tenure": tenure,
                         "interest_rate": interest_rate,
                         "emi": round(emi, 2),
-                        "status": "Pending",
+                        "status": status_label,
                     },
                 }
             ),
             201,
         )
+
+    except ValueError as ve:
+        if conn is not None:
+            conn.rollback()
+        return jsonify({"error": str(ve)}), 400
 
     except mysql.connector.Error as e:
         if conn is not None:
@@ -437,7 +484,7 @@ def get_user_loans():
                 u.email
             FROM loans l
             JOIN users u ON l.user_id = u.user_id
-            WHERE u.email = %s
+            WHERE u.email = %s AND l.status != 'Archived'
             ORDER BY l.applied_date DESC
             """,
             (email,),
@@ -866,14 +913,24 @@ def admin_update_loan_status(loan_id):
         conn = get_connection()
         cursor = conn.cursor()
 
+        # Only allow status change on Pending loans
+        cursor.execute(
+            "SELECT status FROM loans WHERE loan_id = %s",
+            (loan_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Loan not found."}), 404
+
+        current_status = row[0]
+        if current_status not in ("Pending",):
+            return jsonify({"error": f"Cannot change status of a loan that is '{current_status}'."}), 400
+
         cursor.execute(
             "UPDATE loans SET status = %s WHERE loan_id = %s",
             (new_status, loan_id),
         )
         conn.commit()
-
-        if cursor.rowcount == 0:
-            return jsonify({"error": "Loan not found."}), 404
 
         return jsonify({
             "message": f"Loan status updated to {new_status}.",
@@ -912,7 +969,68 @@ def admin_serve_document(document_id):
 
         rel_path, original_filename = row[0], row[1]
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        full_path = os.path.join(base_dir, rel_path)
+        full_path = os.path.normpath(os.path.join(base_dir, rel_path))
+
+        # Prevent path traversal — ensure resolved path stays within uploads/
+        uploads_dir = os.path.normpath(os.path.join(base_dir, "uploads"))
+        if not full_path.startswith(uploads_dir):
+            return jsonify({"error": "Access denied."}), 403
+
+        if not os.path.isfile(full_path):
+            return jsonify({"error": "File not found on server."}), 404
+
+        return send_file(
+            full_path,
+            as_attachment=False,
+            download_name=original_filename or "document",
+        )
+
+    except Exception:
+        return jsonify({"error": "Could not serve document."}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@loan_bp.route("/api/user/document/<int:document_id>", methods=["GET"])
+def user_serve_document(document_id):
+    """Serve uploaded document file for user viewing (ownership verified)."""
+    email = (request.args.get("email") or "").strip()
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Verify document belongs to the requesting user
+        cursor.execute(
+            """
+            SELECT d.file_path, d.original_filename
+            FROM loan_documents d
+            JOIN loans l ON d.loan_id = l.loan_id
+            JOIN users u ON l.user_id = u.user_id
+            WHERE d.document_id = %s AND u.email = %s
+            """,
+            (document_id, email),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Document not found."}), 404
+
+        rel_path, original_filename = row[0], row[1]
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.normpath(os.path.join(base_dir, rel_path))
+
+        # Prevent path traversal
+        uploads_dir = os.path.normpath(os.path.join(base_dir, "uploads"))
+        if not full_path.startswith(uploads_dir):
+            return jsonify({"error": "Access denied."}), 403
 
         if not os.path.isfile(full_path):
             return jsonify({"error": "File not found on server."}), 404

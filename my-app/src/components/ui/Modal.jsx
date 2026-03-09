@@ -1,34 +1,71 @@
-import React, { useEffect } from "react";
-import "./Modal.css";
+import { useEffect, useCallback } from "react";
 
-export default function Modal({ isOpen, onClose, title, children, maxWidth = "500px" }) {
+/**
+ * Confirm dialog / modal overlay.
+ * Usage:
+ *   <Modal open={showConfirm} title="Confirm Action" onClose={() => setShowConfirm(false)}>
+ *     <p>Are you sure?</p>
+ *     <Button onClick={onConfirm}>Yes</Button>
+ *   </Modal>
+ */
+export default function Modal({ open, title, onClose, children, style }) {
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Escape" && onClose) onClose();
+    },
+    [onClose]
+  );
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
     }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
+  }, [open, handleKeyDown]);
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
-    <div className="ds-modal-overlay" onClick={onClose}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(15, 23, 42, 0.45)",
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
-        className="ds-modal-content"
-        style={{ maxWidth }}
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: "24px 28px",
+          minWidth: 340,
+          maxWidth: 520,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+          ...style,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="ds-modal-header">
-          <h2 className="ds-modal-title">{title}</h2>
-          <button className="ds-modal-close" onClick={onClose}>
-            &times;
-          </button>
-        </div>
-        <div className="ds-modal-body">{children}</div>
+        {title && (
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: "#1e293b",
+              marginBottom: 16,
+            }}
+          >
+            {title}
+          </div>
+        )}
+        {children}
       </div>
     </div>
   );

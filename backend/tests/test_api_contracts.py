@@ -74,7 +74,7 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(set(loan.keys()), expected_keys)
 
     def test_contract_admin_update_status_shape(self):
-        cursor = FakeCursor(rowcount=1)
+        cursor = FakeCursor(fetchone_results=[("Pending",)], rowcount=1)
         p, _ = self._patch_connection("loanRoutes.get_connection", cursor)
         with p:
             res = self.client.patch("/api/admin/loans/101/status", json={"status": "approved"})

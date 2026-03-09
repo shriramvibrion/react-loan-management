@@ -1,31 +1,22 @@
-import React from "react";
-import "./Input.css";
-
-export default function Input({
-  label,
-  error,
-  type = "text",
-  id,
-  fullWidth = true,
-  className = "",
-  ...props
-}) {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
-
+/**
+ * Styled input component matching the design system.
+ */
+export default function Input({ style, ...props }) {
   return (
-    <div className={`ds-input-wrapper ${fullWidth ? "ds-input-full" : ""} ${className}`}>
-      {label && (
-        <label htmlFor={inputId} className="ds-input-label">
-          {label}
-        </label>
-      )}
-      <input
-        id={inputId}
-        type={type}
-        className={`ds-input ${error ? "ds-input-error" : ""}`}
-        {...props}
-      />
-      {error && <span className="ds-input-error-text">{error}</span>}
-    </div>
+    <input
+      style={{
+        width: "100%",
+        padding: "10px 14px",
+        borderRadius: "8px",
+        border: "1px solid #cbd5e1",
+        fontSize: "14px",
+        color: "#1e293b",
+        outline: "none",
+        transition: "border-color 0.2s, box-shadow 0.2s",
+        boxSizing: "border-box",
+        ...style,
+      }}
+      {...props}
+    />
   );
 }

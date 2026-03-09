@@ -59,9 +59,8 @@ def user_login():
         else:
             return jsonify({"message": "Invalid credentials."}), 401
 
-    except mysql.connector.Error as e:
-        err_msg = str(e).strip() if e else "Server error. Please try again later."
-        return jsonify({"message": err_msg}), 500
+    except Exception:
+        return jsonify({"message": "Server error. Please try again later."}), 500
 
     finally:
         if cursor is not None:
