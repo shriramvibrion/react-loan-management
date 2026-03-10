@@ -184,6 +184,13 @@ export default function UserLoanDetail() {
             <InfoRow label="Employer" value={applicant.employer_name} />
             <InfoRow label="Employment Type" value={applicant.employment_type} />
             <InfoRow label="Loan Purpose" value={applicant.loan_purpose} />
+            {applicant.loan_purpose === "Education Loan" && (
+              <>
+                <InfoRow label="Parent / Guardian Name" value={applicant.parent_name} />
+                <InfoRow label="Parent Occupation" value={applicant.parent_occupation} />
+                <InfoRow label="Parent Annual Income" value={applicant.parent_annual_income != null ? `Rs ${Number(applicant.parent_annual_income).toLocaleString()}` : null} />
+              </>
+            )}
             {applicant.notes && <InfoRow label="Notes" value={applicant.notes} />}
           </Section>
         )}

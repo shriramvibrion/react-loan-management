@@ -1,4 +1,5 @@
 import mysql.connector
+import mysql.connector.pooling
 import os
 from dotenv import load_dotenv
 
@@ -16,8 +17,16 @@ db_config = {
 if os.getenv("DB_SSL", "").lower() in ("true", "1", "yes"):
     db_config["ssl_disabled"] = False
 
+# Connection pool for faster response times (avoids per-request connection overhead)
+_pool = mysql.connector.pooling.MySQLConnectionPool(
+    pool_name="lms_pool",
+    pool_size=5,
+    pool_reset_session=True,
+    **db_config,
+)
+
 def get_connection():
-    return mysql.connector.connect(**db_config)
+    return _pool.get_connection()
 
 def get_root_connection():
     config = {

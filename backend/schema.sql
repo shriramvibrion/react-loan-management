@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS loan_application_details (
     employment_type VARCHAR(100),
     loan_purpose VARCHAR(255),
     notes TEXT,
+    parent_name VARCHAR(255),
+    parent_occupation VARCHAR(255),
+    parent_annual_income DECIMAL(15, 2),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (loan_id) REFERENCES loans(loan_id) ON DELETE CASCADE
 );

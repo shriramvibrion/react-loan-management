@@ -59,13 +59,14 @@ export default function DashboardLayout({ children, variant = "blue" }) {
           border: "1px solid rgba(255,255,255,0.8)",
           boxShadow: "0 20px 60px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04)",
           borderRadius: 20,
-          padding: 24,
+          padding: "24px clamp(12px, 3vw, 24px)",
           backdropFilter: "blur(20px) saturate(1.3)",
           WebkitBackdropFilter: "blur(20px) saturate(1.3)",
           position: "relative",
           zIndex: 1,
           animation: "fadeIn 0.4s ease both",
           borderTop: `2px solid ${accentColor}18`,
+          overflowX: "hidden",
         }}
       >
         {children}

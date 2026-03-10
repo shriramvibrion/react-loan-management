@@ -8,6 +8,7 @@ import {
   EMPLOYMENT_TYPES,
   TENURE_OPTIONS,
 } from "../constants";
+import { isValidPAN, isValidAadhaar } from "../utils/validators";
 import useLoanForm from "../hooks/useLoanForm";
 
 export default function ApplyLoan() {
@@ -160,7 +161,7 @@ export default function ApplyLoan() {
           border: "1px solid rgba(99,102,241,0.08)",
           boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
           borderRadius: "20px",
-          padding: "32px 40px",
+          padding: "32px clamp(14px, 4vw, 40px)",
           backdropFilter: "blur(18px)",
           WebkitBackdropFilter: "blur(18px)",
         }}
@@ -191,7 +192,7 @@ export default function ApplyLoan() {
             <h2 style={sectionTitleStyle}>Personal Information</h2>
             <p style={sectionSubtitleStyle}>Tell us about yourself so we can contact you and verify your profile.</p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+            <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
               <div>
                 <label style={labelStyle}>Full Name {requiredStar}</label>
                 <input placeholder="As per your official ID" style={inputStyle} value={form.full_name} onChange={(e) => updateField("full_name", e.target.value)} required />
@@ -239,7 +240,7 @@ export default function ApplyLoan() {
           <div style={sectionCardStyle}>
             <h2 style={sectionTitleStyle}>Loan Details</h2>
             <p style={sectionSubtitleStyle}>Choose your loan amount, interest rate, and tenure. EMI is auto-calculated.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+            <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
               <div>
                 <label style={labelStyle}>Loan Amount {requiredStar}</label>
                 <input type="number" placeholder="e.g. 500000" min="1" style={inputStyle} value={form.loan_amount} onChange={(e) => updateField("loan_amount", e.target.value)} required />
@@ -277,10 +278,13 @@ export default function ApplyLoan() {
           <div style={sectionCardStyle}>
             <h2 style={sectionTitleStyle}>KYC Documents</h2>
             <p style={sectionSubtitleStyle}>Basic identity and address verification. Keep the latest documents handy while submitting the final application.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <div className="responsive-grid-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
               <div>
                 <label style={labelStyle}>PAN Number {requiredStar}</label>
                 <input placeholder="ABCDE1234F" style={inputStyle} value={form.pan_number} onChange={(e) => updateField("pan_number", e.target.value.toUpperCase())} maxLength={10} required />
+                {form.pan_number && !isValidPAN(form.pan_number) && (
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>Invalid PAN format. Expected: ABCDE1234F</div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>PAN File {requiredStar}</label>
@@ -289,7 +293,10 @@ export default function ApplyLoan() {
               </div>
               <div>
                 <label style={labelStyle}>Aadhaar Number {requiredStar}</label>
-                <input placeholder="12-digit Aadhaar" style={inputStyle} value={form.aadhaar_number} onChange={(e) => updateField("aadhaar_number", e.target.value)} maxLength={12} required />
+                <input placeholder="12-digit Aadhaar" style={inputStyle} value={form.aadhaar_number} onChange={(e) => updateField("aadhaar_number", e.target.value.replace(/\D/g, ""))} maxLength={12} required />
+                {form.aadhaar_number && !isValidAadhaar(form.aadhaar_number) && (
+                  <div style={{ marginTop: 4, fontSize: 12, color: "#dc2626", fontWeight: 600 }}>Invalid Aadhaar. Must be exactly 12 digits.</div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Aadhaar File {requiredStar}</label>
@@ -303,7 +310,7 @@ export default function ApplyLoan() {
           <div style={sectionCardStyle}>
             <h2 style={sectionTitleStyle}>Income Details & Documents</h2>
             <p style={sectionSubtitleStyle}>Provide your income information to help us assess eligibility.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+            <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
               <div>
                 <label style={labelStyle}>Monthly Salary / Income {requiredStar}</label>
                 <input type="number" placeholder="e.g. 50000" min="0" style={inputStyle} value={form.monthly_income} onChange={(e) => updateField("monthly_income", e.target.value)} required />
@@ -314,12 +321,16 @@ export default function ApplyLoan() {
               </div>
               <div>
                 <label style={labelStyle}>Employment Type {requiredStar}</label>
-                <select style={inputStyle} value={form.employment_type} onChange={(e) => updateField("employment_type", e.target.value)} required>
-                  <option value="">Select</option>
-                  {EMPLOYMENT_TYPES.map((t) => (
-                    <option key={t} value={t} disabled={t === "Student" && form.loan_purpose !== "Education Loan"}>{t}</option>
-                  ))}
-                </select>
+                {form.loan_purpose === "Education Loan" ? (
+                  <input style={{...inputStyle, background: "#f8fafc"}} value="Student" readOnly />
+                ) : (
+                  <select style={inputStyle} value={form.employment_type} onChange={(e) => updateField("employment_type", e.target.value)} required>
+                    <option value="">Select</option>
+                    {EMPLOYMENT_TYPES.filter((t) => t !== "Student").map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               
               {incomeDocs.map((docType) => (
@@ -333,12 +344,34 @@ export default function ApplyLoan() {
             </div>
           </div>
 
+          {/* Parent Income Details — Required for Education Loan */}
+          {form.loan_purpose === "Education Loan" && (
+            <div style={sectionCardStyle}>
+              <h2 style={sectionTitleStyle}>Parent / Guardian Income Details</h2>
+              <p style={sectionSubtitleStyle}>This section is required for Student Education Loan applications. Provide your parent or guardian's income details.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+                <div>
+                  <label style={labelStyle}>Parent / Guardian Name {requiredStar}</label>
+                  <input placeholder="Full name of parent or guardian" style={inputStyle} value={form.parent_name} onChange={(e) => updateField("parent_name", e.target.value)} required />
+                </div>
+                <div>
+                  <label style={labelStyle}>Parent / Guardian Occupation {requiredStar}</label>
+                  <input placeholder="e.g. Government Employee, Business" style={inputStyle} value={form.parent_occupation} onChange={(e) => updateField("parent_occupation", e.target.value)} required />
+                </div>
+                <div>
+                  <label style={labelStyle}>Parent Annual Income (₹) {requiredStar}</label>
+                  <input type="number" placeholder="e.g. 600000" min="1" style={inputStyle} value={form.parent_annual_income} onChange={(e) => updateField("parent_annual_income", e.target.value)} required />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Loan-Specific Documents */}
           {loanSpecificDocs.length > 0 && (
             <div style={sectionCardStyle}>
               <h2 style={sectionTitleStyle}>Additional Documents — {form.loan_purpose}</h2>
               <p style={sectionSubtitleStyle}>These documents are required specifically for a {form.loan_purpose} application.</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+              <div className="responsive-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
                 {loanSpecificDocs.map((docType) => (
                   <div key={docType}>
                     <label style={labelStyle}>{docType} {requiredStar}</label>
@@ -380,13 +413,12 @@ export default function ApplyLoan() {
 
           {/* Additional Notes */}
           <div style={sectionCardStyle}>
-            <h2 style={sectionTitleStyle}>Additional Notes <span style={{ color: "#64748b", fontSize: "14px", fontWeight: "400" }}>*</span></h2>
+            <h2 style={sectionTitleStyle}>Additional Notes <span style={{ color: "#64748b", fontSize: "14px", fontWeight: "400" }}>(Optional)</span></h2>
             <textarea 
               placeholder="Share any special requirements or clarifications for your loan." 
               style={{...inputStyle, minHeight: "100px", resize: "vertical"}} 
               value={form.notes} 
               onChange={(e) => updateField("notes", e.target.value)}
-              required
             />
           </div>
 
@@ -395,11 +427,11 @@ export default function ApplyLoan() {
             <button 
               type="button" 
               onClick={() => navigate("/user/dashboard")} 
-              style={{ background: "none", border: "none", color: "#4338ca", fontWeight: "700", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", padding: "12px 16px" }}
+              style={{ background: "none", border: "none", color: "#4338ca", fontWeight: "700", fontSize: "15px", cursor: "pointer", display: "flex", alignItems: "center", padding: "12px 16px" }}
             >
                Back
             </button>
-            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
               <button 
                 type="button" 
                 onClick={handleSaveDraft} 

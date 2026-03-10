@@ -70,6 +70,9 @@ def apply_loan():
     employer_name = _get("employer_name")
     employment_type = _get("employment_type")
     notes = _get("notes")
+    parent_name = _get("parent_name")
+    parent_occupation = _get("parent_occupation")
+    parent_annual_income_raw = _get("parent_annual_income")
 
     if submission_type not in ("submit", "draft"):
         submission_type = "submit"
@@ -108,17 +111,29 @@ def apply_loan():
             employer_name,
             employment_type,
             loan_purpose,
-            notes,
         ]
         if any(not field for field in required_text_fields):
             return (
                 jsonify(
                     {
-                        "error": "All fields are required except alternate mobile number."
+                        "error": "All fields are required except alternate mobile number and notes."
                     }
                 ),
                 400,
             )
+
+        # Validate parent income details for Education Loan
+        if loan_purpose == "Education Loan":
+            if not parent_name or not parent_occupation or not parent_annual_income_raw:
+                return jsonify({"error": "Parent income details are required for Education Loan."}), 400
+            try:
+                parent_annual_income = float(parent_annual_income_raw)
+                if parent_annual_income <= 0:
+                    return jsonify({"error": "Parent annual income must be greater than zero."}), 400
+            except ValueError:
+                return jsonify({"error": "Parent annual income must be a valid number."}), 400
+        else:
+            parent_annual_income = None
 
         # Format validation for sensitive fields
         if not re.match(r"^[A-Z]{5}[0-9]{4}[A-Z]$", pan_number):
@@ -209,6 +224,13 @@ def apply_loan():
         except ValueError:
             interest_rate = 10.0
 
+        parent_annual_income = None
+        if parent_annual_income_raw:
+            try:
+                parent_annual_income = float(parent_annual_income_raw)
+            except ValueError:
+                parent_annual_income = None
+
     # Compute EMI (skip if missing data)
     emi = 0
     if loan_amount > 0 and tenure > 0 and interest_rate > 0:
@@ -235,6 +257,8 @@ def apply_loan():
     address_line1 = str(escape(address_line1)) if address_line1 else address_line1
     address_line2 = str(escape(address_line2)) if address_line2 else address_line2
     employer_name = str(escape(employer_name)) if employer_name else employer_name
+    parent_name = str(escape(parent_name)) if parent_name else parent_name
+    parent_occupation = str(escape(parent_occupation)) if parent_occupation else parent_occupation
 
     if not is_draft:
         agreement_prefix = f"[Agreement: {agreement_decision.capitalize()}]"
@@ -294,9 +318,12 @@ def apply_loan():
                 employer_name,
                 employment_type,
                 loan_purpose,
-                notes
+                notes,
+                parent_name,
+                parent_occupation,
+                parent_annual_income
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 loan_id,
@@ -317,6 +344,9 @@ def apply_loan():
                 employment_type or None,
                 loan_purpose,
                 notes or None,
+                parent_name or None,
+                parent_occupation or None,
+                parent_annual_income,
             ),
         )
 
@@ -576,7 +606,8 @@ def get_user_loan_detail(loan_id):
                 id, full_name, contact_email, primary_mobile, alternate_mobile,
                 dob, address_line1, address_line2, city, state, postal_code,
                 pan_number, aadhaar_number, monthly_income, employer_name,
-                employment_type, loan_purpose, notes, created_at
+                employment_type, loan_purpose, notes, created_at,
+                parent_name, parent_occupation, parent_annual_income
             FROM loan_application_details
             WHERE loan_id = %s
             """,
@@ -605,6 +636,9 @@ def get_user_loan_detail(loan_id):
                 "loan_purpose": detail_row[16],
                 "notes": detail_row[17],
                 "created_at": detail_row[18].isoformat() if detail_row[18] else None,
+                "parent_name": detail_row[19],
+                "parent_occupation": detail_row[20],
+                "parent_annual_income": float(detail_row[21]) if detail_row[21] else None,
             }
 
         cursor.execute(
@@ -820,7 +854,8 @@ def admin_get_loan_detail(loan_id):
                 id, full_name, contact_email, primary_mobile, alternate_mobile,
                 dob, address_line1, address_line2, city, state, postal_code,
                 pan_number, aadhaar_number, monthly_income, employer_name,
-                employment_type, loan_purpose, notes, created_at
+                employment_type, loan_purpose, notes, created_at,
+                parent_name, parent_occupation, parent_annual_income
             FROM loan_application_details
             WHERE loan_id = %s
             """,
@@ -849,6 +884,9 @@ def admin_get_loan_detail(loan_id):
                 "loan_purpose": detail_row[16],
                 "notes": detail_row[17],
                 "created_at": detail_row[18].isoformat() if detail_row[18] else None,
+                "parent_name": detail_row[19],
+                "parent_occupation": detail_row[20],
+                "parent_annual_income": float(detail_row[21]) if detail_row[21] else None,
             }
 
         cursor.execute(

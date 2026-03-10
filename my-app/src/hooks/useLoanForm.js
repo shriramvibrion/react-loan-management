@@ -32,6 +32,9 @@ const INITIAL_FORM = {
   employer_name: "",
   agreement: "",
   notes: "",
+  parent_name: "",
+  parent_occupation: "",
+  parent_annual_income: "",
 };
 
 function loadDraft(email) {
@@ -78,12 +81,31 @@ export default function useLoanForm(userEmail) {
     }
   }, [form.loan_purpose, form.interest_rate]);
 
+  // Auto-set employment type to "Student" when loan purpose is Education Loan
+  useEffect(() => {
+    if (form.loan_purpose === "Education Loan" && form.employment_type !== "Student") {
+      setForm((prev) => ({ ...prev, employment_type: "Student" }));
+    }
+  }, [form.loan_purpose, form.employment_type]);
+
   // Reset employment type if "Student" is selected but loan purpose is not Education Loan
   useEffect(() => {
     if (form.employment_type === "Student" && form.loan_purpose !== "Education Loan") {
       setForm((prev) => ({ ...prev, employment_type: "" }));
     }
   }, [form.loan_purpose, form.employment_type]);
+
+  // Clear parent income fields when loan purpose is not Education Loan
+  useEffect(() => {
+    if (form.loan_purpose !== "Education Loan") {
+      setForm((prev) => ({
+        ...prev,
+        parent_name: "",
+        parent_occupation: "",
+        parent_annual_income: "",
+      }));
+    }
+  }, [form.loan_purpose]);
 
   // Auto-calc EMI
   useEffect(() => {
@@ -99,8 +121,16 @@ export default function useLoanForm(userEmail) {
   }, [form.loan_amount, form.interest_rate, form.tenure, form.emi]);
 
   const handleFileChange = useCallback((docType, e) => {
-    if (e.target.files?.[0]) {
-      setFiles((prev) => ({ ...prev, [docType]: e.target.files[0] }));
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      setFiles((prev) => ({ ...prev, [docType]: file }));
+    } else {
+      // User cancelled or cleared the file — remove stale entry
+      setFiles((prev) => {
+        const updated = { ...prev };
+        delete updated[docType];
+        return updated;
+      });
     }
   }, []);
 
@@ -132,8 +162,18 @@ export default function useLoanForm(userEmail) {
       "address_line1", "address_line2", "city", "state", "postal_code",
       "loan_amount", "tenure", "loan_purpose", "employment_type",
       "pan_number", "aadhaar_number", "monthly_income", "employer_name",
-      "notes",
     ];
+
+    // Student Education Loan requires parent income details
+    if (form.loan_purpose === "Education Loan") {
+      if (!form.parent_name || !form.parent_occupation || !form.parent_annual_income) {
+        return { valid: false, message: "Parent income details are required for Education Loan applications." };
+      }
+      const parentIncome = parseFloat(form.parent_annual_income);
+      if (isNaN(parentIncome) || parentIncome <= 0) {
+        return { valid: false, message: "Parent annual income must be a positive number." };
+      }
+    }
     for (const field of requiredFields) {
       if (!form[field]) {
         return { valid: false, message: "Please fill in all mandatory fields before submitting." };
@@ -195,7 +235,8 @@ export default function useLoanForm(userEmail) {
         "dob", "address_line1", "address_line2", "city", "state", "postal_code",
         "pan_number", "aadhaar_number", "loan_amount", "tenure", "loan_purpose",
         "interest_rate", "emi", "employment_type", "monthly_income",
-        "employer_name", "notes",
+        "employer_name", "notes", "parent_name", "parent_occupation",
+        "parent_annual_income",
       ];
       for (const key of textFields) {
         if (form[key] !== undefined && form[key] !== null && form[key] !== "") {
@@ -256,6 +297,9 @@ export default function useLoanForm(userEmail) {
       employer_name: applicant?.employer_name || "",
       agreement: "",
       notes: applicant?.notes || "",
+      parent_name: applicant?.parent_name || "",
+      parent_occupation: applicant?.parent_occupation || "",
+      parent_annual_income: applicant?.parent_annual_income ? String(applicant.parent_annual_income) : "",
     });
     // Clear file state — user must re-upload files for a draft
     setFiles({});

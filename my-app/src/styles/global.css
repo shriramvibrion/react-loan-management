@@ -824,3 +824,102 @@ a, button, input, select, textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════ */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.responsive-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (max-width: 768px)
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Auth pages */
+  .page {
+    justify-content: center;
+    align-items: center;
+  }
+  .card-wrap {
+    margin-right: 0;
+    padding: 16px;
+  }
+  .card, .index-card {
+    width: min(92vw, 400px);
+    padding: 32px 24px 28px;
+  }
+
+  /* Loan form page */
+  .page-bg-image {
+    padding: 16px 10px !important;
+  }
+  .page-bg-image > div {
+    padding: 20px 16px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Grid layouts should stack */
+  .responsive-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard container adjustments */
+  .toast-container {
+    right: 10px;
+    left: 10px;
+    align-items: stretch;
+  }
+  .toast {
+    max-width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile (max-width: 480px)
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .card, .index-card {
+    width: min(96vw, 380px);
+    padding: 24px 16px 20px;
+  }
+  .btn-blue, .btn-orange {
+    font-size: 13px;
+    padding: 12px 16px;
+  }
+  .card-title-blue, .card-title-orange {
+    font-size: 20px;
+  }
+
+  /* Make all grids single column on mobile */
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .responsive-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Auth page background adjustments */
+  .page {
+    padding: 10px;
+  }
+  .bg {
+    background-attachment: scroll;
+  }
+
+  .page-bg-image {
+    padding: 10px 6px !important;
+  }
+  .page-bg-image > div {
+    padding: 14px 10px !important;
+    border-radius: 12px !important;
+  }
+}

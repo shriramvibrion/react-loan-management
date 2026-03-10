@@ -141,10 +141,10 @@ export default function AdminDashboard() {
             display: "flex",
             gap: 10,
             alignItems: "center",
-            flexWrap: "nowrap",
+            flexWrap: "wrap",
             justifyContent: "space-between",
             flex: 1,
-            minWidth: 420,
+            minWidth: 0,
             paddingBottom: 2,
           }}
         >
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
             onChange={(e) => setQuery(e.target.value)}
             style={{
               flex: 1,
-              minWidth: 220,
+              minWidth: 180,
               background: "rgba(255,255,255,0.95)",
               color: "#1e293b",
               boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
       )}
 
       {!loading && !message && filteredLoans.length > 0 && viewMode === "list" && (
-        <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(15,23,42,0.06)", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+        <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 16, overflow: "auto", border: "1px solid rgba(15,23,42,0.06)", boxShadow: "0 1px 3px rgba(15,23,42,0.04)", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "linear-gradient(135deg, #fff7ed, #ffedd5)", borderBottom: "2px solid #fed7aa" }}>
