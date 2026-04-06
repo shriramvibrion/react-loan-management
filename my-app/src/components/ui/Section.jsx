@@ -9,12 +9,14 @@ export default function Section({ title, variant = "blue", children, style }) {
   return (
     <div
       style={{
-        background: "#fff",
+        background: "linear-gradient(135deg, rgba(238,243,252,0.82), rgba(255,255,255,0.8))",
         borderRadius: 16,
         padding: 20,
         marginBottom: 16,
-        border: "1px solid rgba(15,23,42,0.06)",
-        boxShadow: "0 1px 3px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.03)",
+        border: "1px solid rgba(255,255,255,0.72)",
+        boxShadow: "0 8px 24px rgba(15,23,42,0.06), 0 1px 0 rgba(255,255,255,0.35) inset",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         ...style,
       }}
     >

@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:chrome": "cypress run --browser chrome",
+    "cypress:run:firefox": "cypress run --browser firefox",
+    "cypress:run:headless": "cypress run --headless",
+    "cypress:ci": "start-server-and-test start http://localhost:3001 cypress:run",
+    "cypress:debug": "cypress run --headed --no-exit",
+    "cypress:run:auth": "cypress run --spec 'cypress/e2e/1-authentication/**/*.cy.js'",
+    "cypress:run:loans": "cypress run --spec 'cypress/e2e/2-loan-application/**/*.cy.js'",
+    "cypress:run:admin": "cypress run --spec 'cypress/e2e/4-admin-workflows/**/*.cy.js'",
+    "cypress:run:e2e": "cypress run --spec 'cypress/e2e/5-e2e-workflows/**/*.cy.js'",
+    "cypress:run:performance": "cypress run --spec 'cypress/e2e/9-performance/**/*.cy.js'",
+    "cypress:run:error": "cypress run --spec 'cypress/e2e/8-error-scenarios/**/*.cy.js'"
+  }
+}

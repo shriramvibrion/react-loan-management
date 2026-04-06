@@ -29,7 +29,7 @@ export default function Button({
   const variants = {
     primary: {
       background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-      color: "#fff",
+      color: "var(--text-on-accent)",
       boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3), 0 1px 2px rgba(0,0,0,0.05)",
     },
     secondary: {
@@ -40,7 +40,7 @@ export default function Button({
     },
     danger: {
       background: "linear-gradient(135deg, #f43f5e, #e11d48)",
-      color: "#fff",
+      color: "var(--text-on-accent)",
       boxShadow: "0 4px 14px rgba(244, 63, 94, 0.3)",
     },
     ghost: {

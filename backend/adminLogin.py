@@ -1,8 +1,11 @@
 from flask import Blueprint, request, jsonify
-from database import get_connection
+import logging
+import mysql.connector
 import bcrypt
+from database import get_connection
 
 admin_login_bp = Blueprint("admin_login", __name__)
+logger = logging.getLogger(__name__)
 
 
 @admin_login_bp.route("/api/admin/login", methods=["POST"])
@@ -31,21 +34,30 @@ def admin_login():
             return jsonify({"message": "Invalid credentials."}), 401
 
         db_email = admin[0]  # email from DB
-        db_password = admin[1]  # hashed password from DB (stored as string)
+        db_password = (admin[1] or "")
 
-        # ── Verify entered password against hashed password in DB ─────
-        password_match = bcrypt.checkpw(
-            password.encode("utf-8"),  # entered password
-            db_password.encode("utf-8"),  # hashed password stored in DB
-        )
+        # Support either bcrypt hash or legacy plaintext storage.
+        password_match = False
+        if db_password.startswith("$2a$") or db_password.startswith("$2b$") or db_password.startswith("$2y$"):
+            try:
+                password_match = bcrypt.checkpw(password.encode("utf-8"), db_password.encode("utf-8"))
+            except Exception:
+                password_match = False
+        else:
+            password_match = password == db_password
 
         if password_match:
             return jsonify({"message": "Login successful.", "admin": db_email}), 200
         else:
             return jsonify({"message": "Invalid credentials."}), 401
 
+    except mysql.connector.Error:
+        logger.exception("Admin login database error")
+        return jsonify({"message": "Database error. Please try again later."}), 500
+
     except Exception:
-        # Avoid leaking DB details to client
+        logger.exception("Admin login unexpected error")
+        # Avoid leaking internals to client
         return jsonify({"message": "Server error. Please try again later."}), 500
 
     finally:

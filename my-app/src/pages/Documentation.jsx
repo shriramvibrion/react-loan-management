@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const coreSections = [
@@ -65,13 +64,12 @@ const disclaimers = [
   "Final sanction letter terms always take precedence.",
 ];
 
-export default function Documentation() {
-  const navigate = useNavigate();
+export default function Documentation({ navigate, onLogout }) {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
+    if (onLogout) onLogout();
+    else logout();
   };
 
   return (
@@ -83,7 +81,7 @@ export default function Documentation() {
         padding: "20px 22px",
         boxSizing: "border-box",
         background:
-          "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)",
+          "radial-gradient(ellipse at 0% 0%, #dbeafe 0%, #e0e7ff 28%, #f1f5f9 72%)",
         overflowY: "auto",
       }}
     >
@@ -92,8 +90,10 @@ export default function Documentation() {
           width: "100%",
           maxWidth: 1500,
           margin: "0 auto",
-          background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(18px)",
+          background: "rgba(238,243,252,0.84)",
+          border: "1px solid rgba(255,255,255,0.72)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRadius: 20,
           boxShadow: "0 14px 40px rgba(15, 23, 42, 0.08)",
           padding: "18px 18px 16px",
@@ -106,7 +106,7 @@ export default function Documentation() {
             padding: "14px 16px 12px",
             background:
               "linear-gradient(130deg, #4338ca, #6366f1)",
-            color: "#fff",
+            color: "var(--text-on-accent)",
             display: "flex",
             flexDirection: "column",
             gap: 12,
@@ -149,7 +149,7 @@ export default function Documentation() {
                 width: "auto",
                 padding: "8px 14px",
                 background: "rgba(255,255,255,0.14)",
-                color: "#fff",
+                color: "var(--text-on-accent)",
                 border: "1px solid rgba(255,255,255,0.35)",
               }}
               onClick={handleLogout}
@@ -263,7 +263,7 @@ export default function Documentation() {
                     color: "#4338ca",
                     boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
                   }}
-                  onClick={() => navigate("/user/dashboard")}
+                  onClick={() => navigate("user-dashboard")}
                 >
                   My Loans
                 </button>
@@ -277,7 +277,7 @@ export default function Documentation() {
                     letterSpacing: 0.9,
                     boxShadow: "0 3px 10px rgba(0,0,0,0.18)",
                   }}
-                  onClick={() => navigate("/user/apply")}
+                  onClick={() => navigate("apply-loan")}
                 >
                   Apply Loan
                 </button>
@@ -438,7 +438,7 @@ export default function Documentation() {
           <button
             className="home-btn-blue"
             style={{ width: "auto", padding: "9px 16px" }}
-            onClick={() => navigate("/")}
+            onClick={() => navigate("index")}
           >
             Back to Home
           </button>

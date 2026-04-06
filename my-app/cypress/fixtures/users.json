@@ -1,0 +1,29 @@
+// cypress/fixtures/users.json
+{
+  "validUser": {
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "password": "SecurePass123!",
+    "phone": "9876543210",
+    "city": "Mumbai"
+  },
+  "adminUser": {
+    "username": "admin_user",
+    "email": "admin@example.com",
+    "password": "AdminPass123!"
+  },
+  "invalidUser": {
+    "email": "nonexistent@example.com",
+    "password": "WrongPassword123!"
+  },
+  "userWithWeakPassword": {
+    "name": "Test User",
+    "email": "test@example.com",
+    "password": "weak"
+  },
+  "userWithInvalidEmail": {
+    "name": "Test User",
+    "email": "invalid-email",
+    "password": "ValidPass123!"
+  }
+}

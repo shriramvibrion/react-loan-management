@@ -46,6 +46,32 @@ export const EMPLOYMENT_SPECIFIC_DOCS = {
   Other: ["Income Source Proof", "Recent Bank Statement"],
 };
 
+// Allowed relationship options for related parties in loan application form
+export const COAPPLICANT_RELATIONSHIP_OPTIONS = [
+  "Father",
+  "Mother",
+  "Spouse",
+  "Brother",
+  "Sister",
+  "Son",
+  "Daughter",
+  "Guardian",
+];
+
+export const GUARANTOR_RELATIONSHIP_OPTIONS = [
+  "Father",
+  "Mother",
+  "Spouse",
+  "Brother",
+  "Sister",
+  "Uncle",
+  "Aunt",
+  "Relative",
+  "Friend",
+  "Colleague",
+  "Guardian",
+];
+
 // User roles
 export const ROLES = {
   USER: "user",
@@ -64,6 +90,10 @@ export const ROUTES = {
   USER_ANALYTICS: "/user/analytics",
   USER_LOAN_DETAIL: "/user/loan/:loanId",
   APPLY_LOAN: "/user/apply",
+  EMI_CALCULATOR: "/user/emi-calculator",
+  ELIGIBILITY_CHECKER: "/user/eligibility",
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_LOAN_DETAIL: "/admin/loan/:loanId",
+  ADMIN_ANALYTICS: "/admin/analytics",
+  ADMIN_USERS_LOANS: "/admin/users-loans",
 };

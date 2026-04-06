@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 import { useToast } from "../context/ToastContext";
 import { registerUser } from "../services/authService";
 import { isValidEmail } from "../utils/validators";
 import PasswordInput from "../components/ui/PasswordInput";
+import ThemeToggle from "../components/ui/ThemeToggle";
 
-export default function UserRegister() {
-  const navigate = useNavigate();
+export default function UserRegister({ navigate }) {
   const toast = useToast();
   const [form, setForm] = useState({
     name: "",
@@ -46,7 +45,7 @@ export default function UserRegister() {
       setLoading(true);
       const data = await registerUser(form);
       toast.success(data.message || "Registered successfully.");
-      navigate("/user/login");
+      navigate("user-login");
     } catch (err) {
       setMessage(err.message || "Registration failed.");
     } finally {
@@ -55,8 +54,11 @@ export default function UserRegister() {
   };
 
   return (
-    <PageBg>
+    <PageBg pageClass="auth-page">
       <div className="card">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -4 }}>
+          <ThemeToggle />
+        </div>
         <div className="card-title-blue">User Register</div>
 
         <input
@@ -91,7 +93,17 @@ export default function UserRegister() {
         />
 
         {message && (
-          <div className="link-row" style={{ color: "#e06d0a" }}>
+          <div
+            className="link-row"
+            style={{
+              color: "#b45309",
+              background: "rgba(255,247,237,0.78)",
+              border: "1px solid rgba(245,158,11,0.22)",
+              borderRadius: 10,
+              padding: "8px 10px",
+              fontWeight: 600,
+            }}
+          >
             {message}
           </div>
         )}
@@ -102,12 +114,12 @@ export default function UserRegister() {
 
         <div className="link-row">
           Already have an account?{" "}
-          <button className="link-blue" onClick={() => navigate("/user/login")}>
+          <button className="link-blue" onClick={() => navigate("user-login")}>
             Login
           </button>
         </div>
 
-        <button className="home-btn-blue" onClick={() => navigate("/")}>
+        <button className="home-btn-blue" onClick={() => navigate("index")}>
           Home
         </button>
       </div>

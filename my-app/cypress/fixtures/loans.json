@@ -1,0 +1,63 @@
+// cypress/fixtures/loans.json
+{
+  "validLoan": {
+    "amount": 500000,
+    "tenure": 60,
+    "rate": 10,
+    "purpose": "Home Loan",
+    "fullName": "John Doe",
+    "pan": "ABCDE1234F",
+    "aadhaar": "123456789012",
+    "income": 50000,
+    "cibil": 750,
+    "employment": "Salaried"
+  },
+  "smallLoan": {
+    "amount": 100000,
+    "tenure": 24,
+    "rate": 9.5,
+    "purpose": "Personal Loan",
+    "fullName": "John Doe",
+    "pan": "ABCDE1234F",
+    "aadhaar": "123456789012",
+    "income": 30000,
+    "cibil": 650,
+    "employment": "Salaried"
+  },
+  "educationLoan": {
+    "amount": 300000,
+    "tenure": 120,
+    "rate": 8.5,
+    "purpose": "Education Loan",
+    "fullName": "John Doe",
+    "pan": "ABCDE1234F",
+    "aadhaar": "123456789012",
+    "income": 40000,
+    "cibil": 700,
+    "employment": "Student"
+  },
+  "businessLoan": {
+    "amount": 1000000,
+    "tenure": 84,
+    "rate": 12,
+    "purpose": "Business Loan",
+    "fullName": "John Doe",
+    "pan": "ABCDE1234F",
+    "aadhaar": "123456789012",
+    "income": 100000,
+    "cibil": 800,
+    "employment": "Self-Employed"
+  },
+  "invalidLoan": {
+    "amount": -500000,
+    "tenure": 2000,
+    "rate": 150,
+    "purpose": "Home Loan",
+    "fullName": "John Doe",
+    "pan": "invalid_pan",
+    "aadhaar": "12345",
+    "income": -50000,
+    "cibil": 950,
+    "employment": "Invalid"
+  }
+}

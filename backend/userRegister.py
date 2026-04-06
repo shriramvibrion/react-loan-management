@@ -61,6 +61,13 @@ def register_user():
         )
         conn.commit()
 
+        # Send welcome email (non-critical)
+        try:
+            from emailService import send_welcome_email
+            send_welcome_email(email, name)
+        except Exception:
+            pass
+
         return jsonify({"message": "User registered successfully."}), 201
 
     except mysql.connector.Error as e:

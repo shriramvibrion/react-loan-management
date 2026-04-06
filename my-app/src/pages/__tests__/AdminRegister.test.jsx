@@ -1,48 +1,71 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import AdminRegister from "../AdminRegister";
+import { registerAdmin } from "../../services/authService";
+
+const mockNavigate = jest.fn();
+const mockToastSuccess = jest.fn();
+
+jest.mock("../../context/ToastContext", () => ({
+  useToast: () => ({
+    success: mockToastSuccess,
+    error: jest.fn(),
+    info: jest.fn(),
+  }),
+}));
+
+jest.mock("../../services/authService", () => ({
+  registerAdmin: jest.fn(),
+}));
+
+function renderWithProviders() {
+  return render(
+    <MemoryRouter>
+      <AdminRegister navigate={mockNavigate} />
+    </MemoryRouter>
+  );
+}
 
 describe("AdminRegister", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    global.fetch = jest.fn();
+    mockNavigate.mockReset();
+    mockToastSuccess.mockReset();
+    registerAdmin.mockReset();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
     jest.resetAllMocks();
   });
 
   test("shows validation error when fields are missing", async () => {
-    render(<AdminRegister navigate={jest.fn()} />);
+    renderWithProviders();
 
     await userEvent.click(screen.getByRole("button", { name: /register/i }));
     expect(screen.getByText(/all fields are required/i)).toBeInTheDocument();
   });
 
   test("submits username correctly and redirects to admin login", async () => {
-    const navigate = jest.fn();
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: "Admin registered successfully." }),
-    });
+    registerAdmin.mockResolvedValue({ message: "Admin registered successfully." });
 
-    render(<AdminRegister navigate={navigate} />);
+    renderWithProviders();
 
     await userEvent.type(screen.getByPlaceholderText(/name/i), "Root Admin");
     await userEvent.type(screen.getByPlaceholderText(/email/i), "admin@test.com");
-    await userEvent.type(screen.getByPlaceholderText(/password/i), "secret");
+    await userEvent.type(screen.getByPlaceholderText(/password/i), "secret123");
     await userEvent.click(screen.getByRole("button", { name: /register/i }));
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
-    const [, options] = global.fetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toMatchObject({
+    await waitFor(() => expect(registerAdmin).toHaveBeenCalledTimes(1));
+    expect(registerAdmin).toHaveBeenCalledWith({
       username: "Root Admin",
       email: "admin@test.com",
-      password: "secret",
+      password: "secret123",
     });
 
-    jest.advanceTimersByTime(1500);
-    expect(navigate).toHaveBeenCalledWith("admin-login");
+    expect(await screen.findByText(/^\s*✅\s*Admin registered successfully\./i)).toBeInTheDocument();
+    expect(mockToastSuccess).toHaveBeenCalledWith("Admin registered successfully.");
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("admin-login"), {
+      timeout: 2500,
+    });
   });
 });

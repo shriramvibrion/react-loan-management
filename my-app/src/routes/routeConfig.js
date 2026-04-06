@@ -18,9 +18,13 @@ export const userRoutes = [
   { path: ROUTES.USER_ANALYTICS, page: "UserLoanAnalytics", role: ROLES.USER },
   { path: ROUTES.USER_LOAN_DETAIL, page: "UserLoanDetail", role: ROLES.USER },
   { path: ROUTES.APPLY_LOAN, page: "ApplyLoan", role: ROLES.USER },
+  { path: ROUTES.EMI_CALCULATOR, page: "EMICalculator", role: ROLES.USER },
+  { path: ROUTES.ELIGIBILITY_CHECKER, page: "EligibilityChecker", role: ROLES.USER },
 ];
 
 export const adminRoutes = [
   { path: ROUTES.ADMIN_DASHBOARD, page: "AdminDashboard", role: ROLES.ADMIN },
   { path: ROUTES.ADMIN_LOAN_DETAIL, page: "AdminLoanDetail", role: ROLES.ADMIN },
+  { path: ROUTES.ADMIN_ANALYTICS, page: "AdminAnalytics", role: ROLES.ADMIN },
+  { path: ROUTES.ADMIN_USERS_LOANS, page: "AdminUserLoanList", role: ROLES.ADMIN },
 ];

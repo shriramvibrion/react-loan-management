@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { loginAdmin } from "../services/authService";
 import { ROLES } from "../constants";
 import PasswordInput from "../components/ui/PasswordInput";
+import ThemeToggle from "../components/ui/ThemeToggle";
 
-export default function AdminLogin() {
-  const navigate = useNavigate();
+export default function AdminLogin({ navigate, onLoginSuccess }) {
   const { login } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -25,9 +24,11 @@ export default function AdminLogin() {
     try {
       await loginAdmin(form.email, form.password);
       login(form.email, ROLES.ADMIN);
+      sessionStorage.setItem("adminEmail", form.email);
       setForm({ email: "", password: "" });
       toast.success("Admin login successful.");
-      navigate("/admin/dashboard");
+      if (onLoginSuccess) onLoginSuccess();
+      else navigate("admin-dashboard");
     } catch (err) {
       toast.error(err.message || "Invalid credentials. Please check your Email and Password.");
     } finally {
@@ -36,9 +37,15 @@ export default function AdminLogin() {
   };
 
   return (
-    <PageBg>
+    <PageBg pageClass="auth-page">
       <div className="card">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -4 }}>
+          <ThemeToggle />
+        </div>
         <div className="card-title-orange">Admin Login</div>
+        <div style={{ marginTop: -6, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+          Secure access for review workflows
+        </div>
 
         <input
           className="input-field input-field-orange"
@@ -65,13 +72,10 @@ export default function AdminLogin() {
         </button>
 
         <div className="link-row">
-          Don't have an account?{" "}
-          <button className="link-orange" onClick={() => navigate("/admin/register")}>
-            Register
-          </button>
+          {/* Admin registration disabled - Admins must be created manually */}
         </div>
 
-        <button className="home-btn-orange" onClick={() => navigate("/")}>
+        <button className="home-btn-orange" onClick={() => navigate("index")}>
           Home
         </button>
       </div>

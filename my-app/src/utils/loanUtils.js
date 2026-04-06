@@ -22,8 +22,43 @@ export function normalizeLoan(loan) {
   let bucket = "Pending";
   if (status === "draft") bucket = "Draft";
   else if (status === "rejected") bucket = "Rejected";
+  else if (status === "rework") bucket = "Rework";
   else if (status === "approved" || status === "accepted") bucket = "Accepted";
   return { ...loan, bucket };
+}
+
+/**
+ * Calculate CIBIL score from loan history using dashboard scoring rules.
+ * @param {object[]} loans
+ * @returns {{ score: number, label: string, color: string, eligible: boolean, accepted: number, rejected: number, pending: number, total: number }}
+ */
+export function calculateCibilFromLoanHistory(loans = []) {
+  const normalized = loans.map(normalizeLoan);
+  const eligibleHistory = normalized.filter((l) => l.bucket !== "Draft");
+  const accepted = eligibleHistory.filter((l) => l.bucket === "Accepted").length;
+  const rejected = eligibleHistory.filter((l) => l.bucket === "Rejected").length;
+  const pending = eligibleHistory.filter((l) => l.bucket === "Pending").length;
+  const total = eligibleHistory.length;
+
+  // Keep a stable baseline for first-time applicants, then apply history modifiers.
+  let score = 650 + accepted * 50 - rejected * 80 + pending * 5;
+  score = Math.max(300, Math.min(900, score));
+
+  const eligible = score >= 650;
+  let label = "Poor";
+  let color = "#ef4444";
+  if (score >= 750) {
+    label = "Excellent";
+    color = "#16a34a";
+  } else if (score >= 650) {
+    label = "Good";
+    color = "#2563eb";
+  } else if (score >= 550) {
+    label = "Fair";
+    color = "#f59e0b";
+  }
+
+  return { score, label, color, eligible, accepted, rejected, pending, total };
 }
 
 /**
@@ -35,6 +70,8 @@ export function getStatusStyle(status) {
   const s = (status || "").toLowerCase();
   if (s === "rejected") return { bg: "#f8d7da", color: "#721c24" };
   if (s === "approved" || s === "accepted") return { bg: "#d4edda", color: "#155724" };
+  if (s === "under review") return { bg: "#dbeafe", color: "#1d4ed8" };
+  if (s === "rework") return { bg: "#dbeafe", color: "#1e40af" };
   return { bg: "#fff3cd", color: "#856404" };
 }
 

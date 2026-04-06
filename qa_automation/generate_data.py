@@ -59,8 +59,15 @@ def generate_loans(users, count=100):
             "employer_name": "Test Company",
             "employment_type": random.choice(emp_types),
             "interest_rate": str(round(random.uniform(7.5, 15.0), 2)),
+            "cibil_score": str(random.randint(300, 900)),
             "notes": "Automated Test Loan"
         }
+
+        # Education Loan requires parent income details
+        if loan_data["loan_purpose"] == "Education Loan":
+            loan_data["parent_name"] = f"Parent {uuid.uuid4().hex[:4]}"
+            loan_data["parent_occupation"] = random.choice(["Teacher", "Engineer", "Farmer", "Business"])
+            loan_data["parent_annual_income"] = str(random.randint(200000, 1200000))
         
         # dummy files
         files = {

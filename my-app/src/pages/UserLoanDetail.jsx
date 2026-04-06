@@ -1,25 +1,58 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "../context/ToastContext";
-import { fetchUserLoanDetail, updateUserLoanContact, API_BASE_URL } from "../services/loanService";
+import { useAuth } from "../auth/AuthContext";
+import { useParams } from "react-router-dom";
+import { fetchUserLoanDetail, reuploadRejectedDocument } from "../services/loanService";
 import Loader from "../components/ui/Loader";
 import Section from "../components/ui/Section";
 import InfoRow from "../components/ui/InfoRow";
+import { generateLoanPDF } from "../utils/pdfReport";
+import { fetchLoanReportData } from "../services/loanService";
 
-export default function UserLoanDetail() {
-  const navigate = useNavigate();
-  const { loanId } = useParams();
-  const location = useLocation();
-  const displayId = location.state?.displayId || loanId;
-  const { userEmail } = useAuth();
+export default function UserLoanDetail({ navigate, userEmail: userEmailProp, loanId: loanIdProp, onBack }) {
+  const { userEmail: sessionUserEmail } = useAuth();
+  const { loanId: routeLoanId } = useParams();
+  const resolvedLoanId = loanIdProp ?? (routeLoanId ? Number(routeLoanId) : null);
+  const resolvedUserEmail = userEmailProp || sessionUserEmail;
+  const go = (target, params = {}) => {
+    if (typeof navigate === "function") {
+      navigate(target, params);
+    }
+  };
+  const displayId = resolvedLoanId;
   const toast = useToast();
+  const userEmail = resolvedUserEmail;
+  const loanId = resolvedLoanId;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [editingContact, setEditingContact] = useState(false);
-  const [contactForm, setContactForm] = useState({ contact_email: "", primary_mobile: "", alternate_mobile: "" });
-  const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadingDocumentId, setUploadingDocumentId] = useState(null);
+  const fileInputRefs = useRef({});
+
+  const reloadLoanDetail = async (showLoader = false) => {
+    try {
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+      const json = await fetchUserLoanDetail(loanId, userEmail);
+      setData(json);
+      setMessage("");
+    } catch (err) {
+      if (showLoader) {
+        setMessage(err.message || "Failed to load loan details.");
+      }
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      } else {
+        setRefreshing(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!loanId || !userEmail) {
@@ -28,57 +61,104 @@ export default function UserLoanDetail() {
       return;
     }
 
-    const load = async () => {
+    reloadLoanDetail(true);
+
+    const refreshInterval = setInterval(async () => {
       try {
-        setLoading(true);
         const json = await fetchUserLoanDetail(loanId, userEmail);
         setData(json);
-        if (json?.applicant) {
-          setContactForm({
-            contact_email: json.applicant.contact_email || "",
-            primary_mobile: json.applicant.primary_mobile || "",
-            alternate_mobile: json.applicant.alternate_mobile || "",
-          });
-        }
-      } catch (err) {
-        setMessage(err.message || "Failed to load loan details.");
-      } finally {
-        setLoading(false);
+      } catch (_) {
+        // Silent background refresh failure; manual actions still surface errors.
       }
-    };
-    load();
+    }, 10000);
+
+    return () => clearInterval(refreshInterval);
   }, [loanId, userEmail]);
 
-  const handleSaveContact = async () => {
-    if (!loanId || saving) return;
+  const handleDownloadPDF = async () => {
+    if (downloading) return;
     try {
-      setSaving(true);
-      const json = await updateUserLoanContact(loanId, userEmail, contactForm);
-      toast.success(json.message || "Contact information updated.");
-      setEditingContact(false);
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              applicant: {
-                ...prev.applicant,
-                contact_email: contactForm.contact_email,
-                primary_mobile: contactForm.primary_mobile,
-                alternate_mobile: contactForm.alternate_mobile,
-              },
-            }
-          : null
-      );
+      setDownloading(true);
+      const reportData = await fetchLoanReportData(loanId, userEmail, "user");
+      generateLoanPDF(reportData);
+      toast.success("PDF report downloaded!");
     } catch (err) {
-      toast.error(err.message || "Failed to update contact info.");
+      toast.error(err.message || "Failed to generate report.");
     } finally {
-      setSaving(false);
+      setDownloading(false);
+    }
+  };
+
+  const getDocumentBadgeStyle = (status) => {
+    const normalized = (status || "under_review").toLowerCase();
+    if (normalized === "accepted") {
+      return {
+        background: "#dcfce7",
+        color: "#166534",
+        border: "1px solid rgba(22,101,52,0.2)",
+      };
+    }
+    if (normalized === "rejected") {
+      return {
+        background: "#fee2e2",
+        color: "#991b1b",
+        border: "1px solid rgba(153,27,27,0.2)",
+      };
+    }
+    return {
+      background: "#fef3c7",
+      color: "#92400e",
+      border: "1px solid rgba(146,64,14,0.2)",
+    };
+  };
+
+  const handleReuploadClick = (doc) => {
+    // Trigger hidden file input
+    fileInputRefs.current[doc.document_id]?.click();
+  };
+
+  const handleFileSelect = async (documentId, file) => {
+    if (!file) return;
+
+    // Find the document object
+    const doc = data?.documents?.find((d) => d.document_id === documentId);
+    if (!doc) return;
+
+    try {
+      setUploadingDocumentId(documentId);
+      const json = await reuploadRejectedDocument(documentId, userEmail, file);
+      const updatedDocument = json?.document;
+
+      setData((prev) => {
+        if (!prev?.documents) return prev;
+        return {
+          ...prev,
+          documents: prev.documents.map((item) =>
+            item.document_id === documentId
+              ? {
+                  ...item,
+                  ...updatedDocument,
+                }
+              : item
+          ),
+        };
+      });
+
+      toast.success(json?.message || "Document re-uploaded successfully.");
+    } catch (err) {
+      toast.error(err.message || "Failed to re-upload document.");
+    } finally {
+      setUploadingDocumentId(null);
+      // Reset the file input
+      if (fileInputRefs.current[documentId]) {
+        fileInputRefs.current[documentId].value = "";
+      }
     }
   };
 
   if (loading) {
     return (
-      <div className="page-bg-image" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)" }}>
+      <div className="page-bg-image loan-app-bg loan-details-bg user-loan-details-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 0% 0%, #dbeafe 0%, #e0e7ff 28%, #f1f5f9 72%)" }}>
         <Loader text="Loading loan details..." size={36} />
       </div>
     );
@@ -86,44 +166,49 @@ export default function UserLoanDetail() {
 
   if (message && !data) {
     return (
-      <div className="page-bg-image" style={{ minHeight: "100vh", padding: 22, background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)", color: "#0f172a" }}>
-        <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(255,255,255,0.92)", borderRadius: 18, padding: 18, boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)", backdropFilter: "blur(16px)" }}>
+      <div className="page-bg-image loan-app-bg loan-details-bg user-loan-details-bg" style={{ minHeight: "100vh", padding: 22,background: "radial-gradient(ellipse at 0% 0%, #dbeafe 0%, #e0e7ff 28%, #f1f5f9 72%)", color: "#0f172a" }}>
+        <div style={{ width: "min(1120px, 96vw)", margin: "0 auto", background: "rgba(238,243,252,0.84)", border: "1px solid rgba(255,255,255,0.72)", borderRadius: 18, padding: 18, boxShadow: "0 20px 58px rgba(15, 23, 42, 0.08)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}>
           <div style={{ color: "#4338ca", marginBottom: 16, fontWeight: 700 }}>{message}</div>
-          <button className="home-btn-blue" onClick={() => navigate("/user/dashboard")}>Back</button>
+          <button className="home-btn-blue" onClick={() => go("user-dashboard")}>Back</button>
         </div>
       </div>
     );
   }
 
-  const { loan, applicant, documents } = data || {};
+  const { loan, applicant, documents, coapplicants, guarantors } = data || {};
   const status = (loan?.status || "").toLowerCase();
-  const docViewUrl = (docId) => `${API_BASE_URL}/api/user/document/${docId}?email=${encodeURIComponent(userEmail || "")}`;
+  const loanStatusNormalized =
+    status === "under review" || status === "under_review" || status === "pending"
+      ? "under_review"
+      : status;
+  const loanStatusLabel = loanStatusNormalized === "under_review" ? "Under Review" : (loan?.status || "");
 
   return (
     <div
-      className="page-bg-image"
+      className="page-bg-image loan-app-bg loan-details-bg user-loan-details-bg"
       style={{
         height: "100vh",
         width: "100vw",
         padding: "22px 18px",
         boxSizing: "border-box",
-        background: "radial-gradient(ellipse at 0% 0%, #e0e7ff 0%, #ede9fe 30%, #f1f5f9 70%)",
+        background: "radial-gradient(ellipse at 0% 0%, #dbeafe 0%, #e0e7ff 28%, #f1f5f9 72%)",
         overflowX: "hidden",
         overflowY: "auto",
         color: "#0f172a",
+      
       }}
     >
       <div
         style={{
           width: "min(1120px, 96vw)",
           margin: "0 auto",
-          background: "rgba(255,255,255,0.92)",
-          border: "1px solid rgba(99,102,241,0.08)",
-          boxShadow: "0 18px 60px rgba(15, 23, 42, 0.08)",
+          background: "rgba(238,243,252,0.84)",
+          border: "1px solid rgba(255,255,255,0.72)",
+          boxShadow: "0 20px 58px rgba(15, 23, 42, 0.08)",
           borderRadius: 20,
           padding: 24,
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
@@ -143,16 +228,63 @@ export default function UserLoanDetail() {
                 borderRadius: 999,
                 fontSize: 12,
                 fontWeight: 800,
-                background: status === "pending" ? "#fff3cd" : status === "rejected" ? "#f8d7da" : "#d4edda",
-                color: status === "pending" ? "#856404" : status === "rejected" ? "#721c24" : "#155724",
+                background:
+                  loanStatusNormalized === "under_review"
+                    ? "#fef3c7"
+                    : loanStatusNormalized === "rejected"
+                      ? "#fee2e2"
+                      : "#dcfce7",
+                color:
+                  loanStatusNormalized === "under_review"
+                    ? "#92400e"
+                    : loanStatusNormalized === "rejected"
+                      ? "#991b1b"
+                      : "#166534",
               }}
             >
-              {loan?.status}
+              {loanStatusLabel}
             </span>
+            <button
+              onClick={() => reloadLoanDetail(false)}
+              disabled={refreshing}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: "rgba(255,255,255,0.96)",
+                color: "#312e81",
+                border: "1px solid rgba(99,102,241,0.25)",
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: refreshing ? "not-allowed" : "pointer",
+                opacity: refreshing ? 0.65 : 1,
+                boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+              }}
+            >
+              {refreshing ? "Refreshing..." : "Refresh now"}
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              style={{
+                padding: "10px 18px",
+                borderRadius: 10,
+                background: "linear-gradient(135deg, #6366f1, #4338ca)",
+                color: "var(--text-on-accent)",
+                border: "none",
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: downloading ? "not-allowed" : "pointer",
+                opacity: downloading ? 0.5 : 1,
+                boxShadow: "0 4px 12px rgba(99,102,241,0.25)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {downloading ? "Generating..." : "📄 Download PDF"}
+            </button>
             <button
               className="home-btn-blue"
               style={{ width: "auto", padding: "10px 18px", background: "rgba(255,255,255,0.95)", border: "1px solid rgba(99,102,241,0.25)", boxShadow: "0 1px 3px rgba(15,23,42,0.04)", borderRadius: 10 }}
-              onClick={() => navigate("/user/dashboard")}
+              onClick={() => go("user-dashboard")}
             >
               Back to Dashboard
             </button>
@@ -181,6 +313,8 @@ export default function UserLoanDetail() {
             <InfoRow label="PAN Number" value={applicant.pan_number} />
             <InfoRow label="Aadhaar Number" value={applicant.aadhaar_number} />
             <InfoRow label="Monthly Income" value={applicant.monthly_income != null ? `Rs ${Number(applicant.monthly_income).toLocaleString()}` : null} />
+            <InfoRow label="CIBIL Score" value={applicant.cibil_score != null ? `${applicant.cibil_score}` : "N/A"} />
+            <InfoRow label="Loan Eligibility" value={applicant.cibil_score != null ? (Number(applicant.cibil_score) >= 650 ? "Eligible" : "Not Eligible") : "N/A"} />
             <InfoRow label="Employer" value={applicant.employer_name} />
             <InfoRow label="Employment Type" value={applicant.employment_type} />
             <InfoRow label="Loan Purpose" value={applicant.loan_purpose} />
@@ -191,54 +325,55 @@ export default function UserLoanDetail() {
                 <InfoRow label="Parent Annual Income" value={applicant.parent_annual_income != null ? `Rs ${Number(applicant.parent_annual_income).toLocaleString()}` : null} />
               </>
             )}
-            {applicant.notes && <InfoRow label="Notes" value={applicant.notes} />}
+          </Section>
+        )}
+
+        {Array.isArray(coapplicants) && coapplicants.length > 0 && (
+          <Section title="Co-applicant Details">
+            {coapplicants.map((party, index) => (
+              <div key={party.coapplicant_id || index} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: index < coapplicants.length - 1 ? "1px solid rgba(15,23,42,0.08)" : "none" }}>
+                <div style={{ fontWeight: 800, color: "#c2410c", marginBottom: 10 }}>Co-applicant {index + 1}</div>
+                <InfoRow label="Full Name" value={party.full_name} />
+                <InfoRow label="Relationship" value={party.relationship} />
+                <InfoRow label="Date of Birth" value={party.dob} />
+                <InfoRow label="Mobile" value={party.primary_mobile} />
+                <InfoRow label="Email" value={party.contact_email} />
+                <InfoRow label="Address" value={[party.address_line1, party.address_line2, party.city, party.state, party.postal_code].filter(Boolean).join(", ")} />
+                <InfoRow label="PAN Number" value={party.pan_number} />
+                <InfoRow label="Aadhaar Number" value={party.aadhaar_number} />
+                <InfoRow label="Monthly Income" value={party.monthly_income != null ? `Rs ${Number(party.monthly_income).toLocaleString()}` : null} />
+                <InfoRow label="Employer" value={party.employer_name} />
+                <InfoRow label="Employment Type" value={party.employment_type} />
+              </div>
+            ))}
+          </Section>
+        )}
+
+        {Array.isArray(guarantors) && guarantors.length > 0 && (
+          <Section title="Guarantor Details">
+            {guarantors.map((party, index) => (
+              <div key={party.guarantor_id || index} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: index < guarantors.length - 1 ? "1px solid rgba(15,23,42,0.08)" : "none" }}>
+                <div style={{ fontWeight: 800, color: "#c2410c", marginBottom: 10 }}>Guarantor {index + 1}</div>
+                <InfoRow label="Full Name" value={party.full_name} />
+                <InfoRow label="Relationship" value={party.relationship} />
+                <InfoRow label="Date of Birth" value={party.dob} />
+                <InfoRow label="Mobile" value={party.primary_mobile} />
+                <InfoRow label="Email" value={party.contact_email} />
+                <InfoRow label="Address" value={[party.address_line1, party.address_line2, party.city, party.state, party.postal_code].filter(Boolean).join(", ")} />
+                <InfoRow label="PAN Number" value={party.pan_number} />
+                <InfoRow label="Aadhaar Number" value={party.aadhaar_number} />
+                <InfoRow label="Monthly Income" value={party.monthly_income != null ? `Rs ${Number(party.monthly_income).toLocaleString()}` : null} />
+                <InfoRow label="Employer" value={party.employer_name} />
+                <InfoRow label="Employment Type" value={party.employment_type} />
+              </div>
+            ))}
           </Section>
         )}
 
         <Section title="Contact Information">
-          {editingContact ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <input
-                className="input-field"
-                placeholder="Contact Email"
-                value={contactForm.contact_email}
-                onChange={(e) => setContactForm({ ...contactForm, contact_email: e.target.value })}
-              />
-              <input
-                className="input-field"
-                placeholder="Primary Mobile"
-                value={contactForm.primary_mobile}
-                onChange={(e) => setContactForm({ ...contactForm, primary_mobile: e.target.value })}
-              />
-              <input
-                className="input-field"
-                placeholder="Alternate Mobile"
-                value={contactForm.alternate_mobile}
-                onChange={(e) => setContactForm({ ...contactForm, alternate_mobile: e.target.value })}
-              />
-              <div style={{ display: "flex", gap: 10 }}>
-                <button className="btn-blue" style={{ width: "auto", padding: "10px 20px", marginTop: 0 }} onClick={handleSaveContact} disabled={saving}>
-                  {saving ? "Saving..." : "Save"}
-                </button>
-                <button className="home-btn-blue" style={{ width: "auto", padding: "10px 20px" }} onClick={() => setEditingContact(false)}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <InfoRow label="Contact Email" value={applicant?.contact_email} />
-              <InfoRow label="Primary Mobile" value={applicant?.primary_mobile} />
-              <InfoRow label="Alternate Mobile" value={applicant?.alternate_mobile} />
-              <button
-                className="home-btn-blue"
-                style={{ width: "auto", padding: "8px 16px", marginTop: 8 }}
-                onClick={() => setEditingContact(true)}
-              >
-                Edit Contact Info
-              </button>
-            </>
-          )}
+          <InfoRow label="Contact Email" value={applicant?.contact_email} />
+          <InfoRow label="Primary Mobile" value={applicant?.primary_mobile} />
+          <InfoRow label="Alternate Mobile" value={applicant?.alternate_mobile} />
         </Section>
 
         <Section title="Uploaded Documents">
@@ -263,25 +398,59 @@ export default function UserLoanDetail() {
                   <div>
                     <div style={{ fontWeight: 700, color: "#1e293b" }}>{doc.document_type}</div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>{doc.original_filename}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                      Updated: {doc.updated_at ? new Date(doc.updated_at).toLocaleString() : "N/A"}
+                    </div>
                   </div>
-                  <a
-                    href={docViewUrl(doc.document_id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: 10,
-                      background: "linear-gradient(135deg, #6366f1, #4338ca)",
-                      color: "#fff",
-                      textDecoration: "none",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      boxShadow: "0 4px 12px rgba(99,102,241,0.25)",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    View / Download
-                  </a>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <span
+                      style={{
+                        ...getDocumentBadgeStyle(doc.document_status),
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.3,
+                        minWidth: 120,
+                        textAlign: "center",
+                      }}
+                    >
+                      {doc.document_status_label || "Under Review"}
+                    </span>
+                    {(doc.document_status || "").toLowerCase() === "rejected" && (
+                      <>
+                        <input
+                          ref={(el) => {
+                            fileInputRefs.current[doc.document_id] = el;
+                          }}
+                          type="file"
+                          accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          onChange={(e) => handleFileSelect(doc.document_id, e.target.files?.[0] || null)}
+                          style={{ display: "none" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleReuploadClick(doc)}
+                          disabled={uploadingDocumentId === doc.document_id}
+                          style={{
+                            padding: "8px 16px",
+                            borderRadius: 10,
+                            border: "1px solid rgba(59,130,246,0.3)",
+                            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                            color: "#fff",
+                            fontWeight: 700,
+                            fontSize: "13px",
+                            cursor: uploadingDocumentId === doc.document_id ? "not-allowed" : "pointer",
+                            opacity: uploadingDocumentId === doc.document_id ? 0.6 : 1,
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          {uploadingDocumentId === doc.document_id ? "Uploading..." : "Re-upload"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

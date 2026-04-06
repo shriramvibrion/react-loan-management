@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-import bcrypt
 import re
 import mysql.connector
 from database import get_connection
@@ -44,15 +43,10 @@ def register_admin():
         if existing_admin:
             return jsonify({"error": "Email already registered."}), 400
 
-        # Hash the password securely (store as utf-8 string in DB)
-        password_bytes = password.encode("utf-8")
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(password_bytes, salt).decode("utf-8")
-
-        # Insert new admin into the database
+        # Store password as plaintext (as requested)
         cursor.execute(
             "INSERT INTO admin (username, email, password) VALUES (%s, %s, %s)",
-            (username, email, hashed_password),
+            (username, email, password),
         )
         conn.commit()
 

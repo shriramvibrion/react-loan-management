@@ -1,9 +1,33 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "../../auth/AuthContext";
+import { ThemeProvider } from "../../context/ThemeContext";
+import config from "../../config";
 import AdminDashboard from "../AdminDashboard";
+
+const mockNavigate = jest.fn();
+
+function renderWithProviders() {
+  return render(
+    <MemoryRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AdminDashboard navigate={mockNavigate} />
+        </AuthProvider>
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
 
 describe("AdminDashboard", () => {
   beforeEach(() => {
+    sessionStorage.clear();
+    sessionStorage.setItem(
+      config.SESSION_KEY,
+      JSON.stringify({ email: "admin@test.com", role: "admin", loginAt: Date.now() })
+    );
+    mockNavigate.mockReset();
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -17,18 +41,17 @@ describe("AdminDashboard", () => {
 
   afterEach(() => {
     jest.resetAllMocks();
+    sessionStorage.clear();
   });
 
   test("loads loans and supports searching + row click navigation", async () => {
-    const navigate = jest.fn();
+    renderWithProviders();
 
-    render(<AdminDashboard navigate={navigate} onLogout={jest.fn()} />);
-
-    await waitFor(() => expect(screen.getByText(/loan #1/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/loan #\s*10/i)).toBeInTheDocument());
     await userEvent.type(screen.getByPlaceholderText(/search by loan id/i), "bob");
     expect(screen.getByText(/bob@test.com/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByText(/loan #2/i));
-    expect(navigate).toHaveBeenCalledWith("admin-loan-detail", { loanId: 12 });
+    await userEvent.click(screen.getByText(/loan #\s*12/i));
+    expect(mockNavigate).toHaveBeenCalledWith("admin-loan-detail", { loanId: 12 });
   });
 });

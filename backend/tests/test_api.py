@@ -221,6 +221,7 @@ class ApiTests(unittest.TestCase):
                     "pan_number": "ABCDE1234F",
                     "aadhaar_number": "123412341234",
                     "monthly_income": "50000",
+                    "cibil_score": "720",
                     "employer_name": "Org",
                     "employment_type": "Other",
                     "loan_purpose": "Home Loan",
@@ -273,7 +274,7 @@ class ApiTests(unittest.TestCase):
         cursor = FakeCursor(
             fetchone_results=[
                 (1, 5, 100000, 12, 10, 8792.12, "Pending", datetime(2026, 1, 1), "user@test.com", "User"),
-                (10, "User", "user@test.com", "99999", "88888", None, "a1", "a2", "City", "State", "600001", "ABCDE1234F", "1234", 50000, "Org", "Salaried", "Home Loan", "note", datetime(2026, 1, 1)),
+                (10, "User", "user@test.com", "99999", "88888", None, "a1", "a2", "City", "State", "600001", "ABCDE1234F", "1234", 50000, "Org", "Salaried", "Home Loan", "note", datetime(2026, 1, 1), "Parent", "Teacher", 450000, 720),
             ],
             fetchall_results=[[(7, "PAN", "pan.pdf", "x_pan.pdf", "uploads/loan_1/x_pan.pdf", datetime(2026, 1, 1))]],
         )
@@ -310,7 +311,7 @@ class ApiTests(unittest.TestCase):
     def test_admin_loans_success(self):
         cursor = FakeCursor(
             fetchall_results=[[
-                (1, 100000, 12, 10, 8792.12, "Pending", datetime(2026, 1, 1), 5, "user@test.com", "User")
+                (1, 100000, 12, 10, 8792.12, "Pending", datetime(2026, 1, 1), 5, "user@test.com", "User", 0)
             ]]
         )
         p, _ = self._patch_connection("loanRoutes.get_connection", cursor)
@@ -363,6 +364,7 @@ class ApiTests(unittest.TestCase):
                 "pan_number": "INVALID",
                 "aadhaar_number": "123412341234",
                 "monthly_income": "50000",
+                "cibil_score": "700",
                 "employer_name": "Org",
                 "employment_type": "Other",
                 "loan_purpose": "Other",
@@ -395,7 +397,9 @@ class ApiTests(unittest.TestCase):
                 "pan_number": "ABCDE1234F",
                 "aadhaar_number": "123412341234",
                 "monthly_income": "50000",
+                "cibil_score": "700",
                 "employer_name": "Org",
+
                 "employment_type": "Other",
                 "loan_purpose": "Other",
                 "notes": "test",

@@ -7,6 +7,8 @@ export {
   fetchUserLoans,
   fetchUserLoanDetail,
   updateUserLoanContact,
+  updateAdminDocumentStatus,
+  reuploadRejectedDocument,
   submitLoanApplication,
   API_BASE_URL,
 } from "./services/loanService";

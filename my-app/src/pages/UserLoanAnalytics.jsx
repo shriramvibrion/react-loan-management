@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { fetchUserLoans } from "../services/loanService";
@@ -11,8 +10,7 @@ import StatCard from "../components/ui/StatCard";
 import ProgressBar from "../components/ui/ProgressBar";
 import Section from "../components/ui/Section";
 
-export default function UserLoanAnalytics() {
-  const navigate = useNavigate();
+export default function UserLoanAnalytics({ navigate }) {
   const { userEmail } = useAuth();
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +50,7 @@ export default function UserLoanAnalytics() {
             Overview of your accepted loan progress
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/user/dashboard")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate("user-dashboard")}>
           Back to Dashboard
         </Button>
       </div>
@@ -87,11 +85,11 @@ export default function UserLoanAnalytics() {
               <div
                 key={loan.loan_id}
                 style={{
-                  background: "rgba(255,255,255,0.97)",
+                  background: "rgba(247,249,252,0.92)",
                   borderRadius: 16,
                   padding: 18,
-                  border: "1px solid rgba(15,23,42,0.06)",
-                  boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+                  border: "1px solid rgba(203,213,225,0.55)",
+                  boxShadow: "0 2px 8px rgba(15,23,42,0.05)",
                   transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)",
                 }}
               >

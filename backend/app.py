@@ -9,13 +9,37 @@ from adminRegister import admin_register_bp
 from userRegister import user_register_bp
 from userLogin import user_login_bp
 from loanRoutes import loan_bp
+from notificationRoutes import notify_bp
+from database import ensure_schema_convergence
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max upload
 
-# CORS — restrict to known origins in production
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
-CORS(app, origins=[o.strip() for o in allowed_origins])
+# Keep runtime DB schema aligned with APIs for older local databases.
+ensure_schema_convergence()
+
+# CORS — restrict to known origins in production, but keep common local ports available.
+env_origins = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://localhost:3001,http://localhost:3002",
+    ).split(",")
+    if o.strip()
+]
+local_dev_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+]
+allowed_origins = sorted(set(env_origins + local_dev_origins))
+
+CORS(
+    app,
+    resources={r"/api/*": {"origins": allowed_origins}},
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 # ── Simple in-memory rate limiter for login/register endpoints ────────────
 _rate_store = defaultdict(list)
@@ -46,6 +70,38 @@ app.register_blueprint(admin_register_bp)
 app.register_blueprint(user_register_bp)
 app.register_blueprint(user_login_bp)
 app.register_blueprint(loan_bp)
+app.register_blueprint(notify_bp)
+
+
+@app.route("/api/meta/routes", methods=["GET"])
+def list_api_routes():
+    """Return all registered API routes grouped by HTTP method for testing clients."""
+    grouped = {"GET": [], "POST": [], "PATCH": [], "PUT": [], "DELETE": []}
+
+    for rule in app.url_map.iter_rules():
+        if not rule.rule.startswith("/api/"):
+            continue
+
+        methods = [m for m in rule.methods if m not in {"HEAD", "OPTIONS"}]
+        if not methods:
+            continue
+
+        for method in methods:
+            if method not in grouped:
+                grouped[method] = []
+            grouped[method].append(rule.rule)
+
+    for method in grouped:
+        grouped[method] = sorted(set(grouped[method]))
+
+    return jsonify(
+        {
+            "message": "API routes grouped by method.",
+            "routes": grouped,
+            "counts": {k: len(v) for k, v in grouped.items()},
+            "total": sum(len(v) for v in grouped.values()),
+        }
+    ), 200
 
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "true").lower() in ("true", "1", "yes")

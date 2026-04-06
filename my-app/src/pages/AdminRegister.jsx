@@ -1,110 +1,113 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageBg } from "../App";
 import { useToast } from "../context/ToastContext";
 import { registerAdmin } from "../services/authService";
-import { isValidEmail } from "../utils/validators";
 import PasswordInput from "../components/ui/PasswordInput";
+import ThemeToggle from "../components/ui/ThemeToggle";
 
-export default function AdminRegister() {
-  const navigate = useNavigate();
+export default function AdminRegister({ navigate }) {
   const toast = useToast();
   const [form, setForm] = useState({ username: "", email: "", password: "" });
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const go = (target) => {
+    if (typeof navigate === "function") {
+      navigate(target);
+    }
+  };
 
   const handleRegister = async () => {
     if (!form.username || !form.email || !form.password) {
-      setError("All fields are required.");
-      return;
-    }
-
-    if (!isValidEmail(form.email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
-      setError("Password must contain at least one letter and one number.");
+      setMessage("All fields are required.");
       return;
     }
 
     setLoading(true);
-    setError("");
     setMessage("");
-
     try {
-      const data = await registerAdmin(form);
-      setMessage(data.message || "Admin registered successfully!");
-      toast.success(data.message || "Admin registered successfully!");
+      const data = await registerAdmin({
+        username: form.username,
+        email: form.email,
+        password: form.password,
+      });
+
+      const successMessage = data?.message || "Admin registered successfully.";
+      setMessage(`✅ ${successMessage}`);
+      toast.success(successMessage);
       setForm({ username: "", email: "", password: "" });
-      setTimeout(() => navigate("/admin/login"), 1500);
+
+      setTimeout(() => {
+        go("admin-login");
+      }, 1200);
     } catch (err) {
-      setError(err.message || "Registration failed. Please try again.");
+      const errorMessage = err?.message || "Registration failed.";
+      setMessage(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <PageBg>
+    <PageBg pageClass="auth-page">
       <div className="card">
-        <div className="card-title-orange">Admin Register</div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -4 }}>
+          <ThemeToggle />
+        </div>
+        <div className="card-title-orange">Admin Registration</div>
+        <div style={{ marginTop: -6, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+          Create an administrator account for review workflows
+        </div>
 
         <input
           className="input-field input-field-orange"
           placeholder="Name"
           value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
+          onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+          onKeyDown={(e) => e.key === "Enter" && handleRegister()}
         />
         <input
           className="input-field input-field-orange"
           placeholder="Email"
           type="email"
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+          onKeyDown={(e) => e.key === "Enter" && handleRegister()}
         />
         <PasswordInput
           className="input-field input-field-orange"
           value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+          onKeyDown={(e) => e.key === "Enter" && handleRegister()}
         />
 
         {message && (
-          <p style={{ color: "#2e7d32", fontSize: "13px", textAlign: "center", fontWeight: 600 }}>
-            ✅ {message}
+          <p style={{ padding: "14px 12px", textAlign: "center", color: message.startsWith("✅") ? "#166534" : "#9f1239", fontWeight: 700, fontSize: "14px", background: message.startsWith("✅") ? "rgba(220,252,231,0.78)" : "rgba(255,241,242,0.78)", border: message.startsWith("✅") ? "1px solid rgba(22,163,74,0.24)" : "1px solid rgba(244,63,94,0.24)", borderRadius: 10 }}>
+            {message}
           </p>
         )}
 
-        {error && (
-          <p style={{ color: "#c62828", fontSize: "13px", textAlign: "center", fontWeight: 600 }}>
-            ⚠️ {error}
-          </p>
-        )}
+        <button className="btn-orange" onClick={handleRegister} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+          {loading ? "Registering..." : "Register"}
+        </button>
 
         <button
           className="btn-orange"
-          onClick={handleRegister}
-          disabled={loading}
-          style={{ opacity: loading ? 0.7 : 1 }}
+          onClick={() => go("admin-login")}
+          style={{ marginBottom: "12px" }}
         >
-          {loading ? "Registering..." : "Register"}
+          Back to Admin Login
         </button>
 
         <div className="link-row">
           Already have an account?{" "}
-          <button className="link-orange" onClick={() => navigate("/admin/login")}>
+          <button className="link-orange" onClick={() => go("admin-login")}>
             Login
           </button>
         </div>
 
-        <button className="home-btn-orange" onClick={() => navigate("/")}>
+        <button className="home-btn-orange" onClick={() => go("index")}>
           Home
         </button>
       </div>
